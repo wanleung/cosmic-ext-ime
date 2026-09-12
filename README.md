@@ -141,3 +141,9 @@ installed `cosmic-settings` is built from; bump it in `Cargo.toml` when COSMIC u
 - [x] librime engine
 - [ ] Integration in COSMIC Settings → Keyboard (upstream)
 - [x] Debian packaging (`just deb`)
+
+## License
+
+GPL-3.0-or-later (see `LICENSE`). The FFI binding crates follow the libraries
+they wrap: `crates/cangjie-sys` is LGPL-3.0-or-later and `crates/rime-sys` is
+BSD-3-Clause.
