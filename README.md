@@ -46,9 +46,13 @@ cargo install just          # or: sudo apt install just
 just install-user           # binaries to ~/.local/bin, launcher entries, autostart
 ```
 
-`just install` does the same system-wide under /usr/local. After installing,
-log out and back in (or run `popeinput` once by hand) — it autostarts with every
-COSMIC session from then on.
+`just install` does the same system-wide under /usr/local, and `just deb`
+builds a Debian package (`sudo apt install debhelper devscripts just rust-all`
+first; `sudo apt install ../popeinput_*.deb` then pulls in everything else).
+Use one of these, not both — `just uninstall-user` removes the per-user copy.
+
+After installing, log out and back in (or run `popeinput` once by hand) — it
+autostarts with every COSMIC session from then on.
 
 Only one input method may hold the seat: stop IBus/Fcitx5 first (`ibus exit`,
 `fcitx5-remote -e`), otherwise popeinput logs "input method unavailable" and exits.
@@ -123,4 +127,4 @@ installed `cosmic-settings` is built from; bump it in `Cargo.toml` when COSMIC u
 - [x] HiDPI / fractional scaling for the popup; follows the COSMIC theme
 - [x] librime engine
 - [ ] Integration in COSMIC Settings → Keyboard (upstream)
-- [ ] Debian packaging for Pop!_OS
+- [x] Debian packaging (`just deb`)

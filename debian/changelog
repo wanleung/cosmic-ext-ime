@@ -1,0 +1,6 @@
+popeinput (0.1.0) noble; urgency=medium
+
+  * Initial release: Cangjie/Quick via libcangjie2, RIME via librime,
+    candidate popup, libcosmic settings app, COSMIC input-source toggling.
+
+ -- Wan Leung Wong <me@wanleung.com>  Sat, 12 Sep 2026 16:51:35 +0100

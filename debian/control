@@ -1,0 +1,39 @@
+Source: popeinput
+Section: utils
+Priority: optional
+Maintainer: Wan Leung Wong <me@wanleung.com>
+Build-Depends:
+    debhelper-compat (= 13),
+    just (>= 1.13.0),
+    pkg-config,
+    rust-all (>= 1.88),
+    libclang-dev,
+    libcangjie2-dev,
+    librime-dev,
+    libsqlite3-dev,
+    libwayland-dev,
+    libxkbcommon-dev,
+Standards-Version: 4.6.2
+Homepage: https://github.com/wanleung/popeinput
+Rules-Requires-Root: no
+
+Package: popeinput
+Architecture: amd64 arm64
+Depends:
+    ${misc:Depends},
+    ${shlibs:Depends},
+    libwayland-client0,
+    libcangjie2-data,
+    rime-prelude,
+    rime-essay,
+    fonts-noto-cjk,
+Recommends:
+    rime-data-cangjie5,
+    rime-data-quick5,
+    librime-data-jyutping,
+Description: Cangjie / Quick / RIME input method for the COSMIC desktop
+ Native Wayland input method (zwp_input_method_v2) for COSMIC, made for
+ Hong Kong users. Provides Cangjie and Quick (倉頡／速成) through libcangjie2
+ and any RIME schema through librime, with a candidate popup that follows
+ the COSMIC theme and a libcosmic settings app. Chinese input is toggled
+ with COSMIC's own input-source switcher (Super+Space).
