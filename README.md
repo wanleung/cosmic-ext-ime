@@ -79,6 +79,23 @@ Install schemas with apt (`rime-data-cangjie5`, `rime-data-quick5`,
 schema so all of them get deployed; edit it to trim the list or tweak RIME the
 usual way (`*.custom.yaml`). User dictionaries live in the same directory.
 
+### Application support
+
+| Toolkit | Works? | Notes |
+| --- | --- | --- |
+| COSMIC apps (iced) | yes | native `text-input-v3` |
+| GTK 3 / GTK 4 (gedit, Nautilus, Firefox, GNOME apps) | yes | native `text-input-v3`; `GTK_IM_MODULE` must be **unset** |
+| Chrome / Electron / VS Code | yes | run on Wayland with `--enable-wayland-ime` (e.g. in `~/.config/code-flags.conf`) |
+| Qt 6.5+ (Flatpak Qt apps) | yes | native `text-input-v3` |
+| Qt 5 / Qt 6.4 (Pop!_OS 24.04 packages) | no | those Qt versions lack `text-input-v3`, the only version cosmic-comp offers |
+| X11 / XWayland apps | no | would need an XIM server |
+
+If you previously used IBus or Fcitx, remove `GTK_IM_MODULE`, `QT_IM_MODULE`
+and `XMODIFIERS` from `~/.profile` / `/etc/environment` and run
+`im-config -n none`, then log in again — with those set, toolkits load the old
+IM module instead of talking to the compositor. popeinput logs a warning at
+start-up when it sees them.
+
 ### Switching between Chinese and English
 
 popeinput follows COSMIC's own input-source switcher: add **Chinese** under

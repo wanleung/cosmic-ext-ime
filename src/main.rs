@@ -22,6 +22,8 @@ use crate::im::State;
 fn main() -> Result<()> {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
+    warn_about_im_modules();
+
     let handler = PopeinputConfig::handler().context("opening cosmic-config store")?;
     let cfg = PopeinputConfig::load(&handler);
     log::debug!("config: {cfg:?}");
@@ -57,8 +59,9 @@ fn main() -> Result<()> {
     );
     log::info!("popeinput started ({})", state.engine_name());
 
-    let mut event_loop: EventLoop<State> = EventLoop::try_new().context("creating event loop")?;
+    let mut event_loop: EventLoop<'static, State> = EventLoop::try_new().context("creating event loop")?;
     let handle = event_loop.handle();
+    state.set_loop_handle(handle.clone());
     WaylandSource::new(conn, queue)
         .insert(handle.clone())
         .map_err(|e| anyhow::anyhow!("registering Wayland source: {e}"))?;
@@ -93,4 +96,20 @@ fn main() -> Result<()> {
         })
         .context("event loop")?;
     Ok(())
+}
+
+/// Toolkits talk to the compositor's text-input protocol only when no IM
+/// module is forced; leftover IBus/Fcitx settings silently break that.
+fn warn_about_im_modules() {
+    for var in ["GTK_IM_MODULE", "QT_IM_MODULE", "XMODIFIERS"] {
+        if let Ok(value) = std::env::var(var) {
+            if !value.is_empty() && value != "wayland" && value != "none" {
+                log::warn!(
+                    "{var}={value:?} is set: GTK/Qt apps will use that IM module instead of \
+                     Wayland text-input. Remove it from ~/.profile (or run `im-config -n none`) \
+                     and log in again."
+                );
+            }
+        }
+    }
 }

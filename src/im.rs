@@ -4,8 +4,12 @@
 
 use std::collections::HashSet;
 use std::os::fd::{AsFd, OwnedFd};
+use std::time::Duration;
 
-use popeinput_engine::{InputEngine, Key, Response};
+use calloop::timer::{TimeoutAction, Timer};
+use calloop::{LoopHandle, RegistrationToken};
+
+use popeinput_engine::{InputEngine, Key, KeyInput, Response};
 use wayland_client::protocol::wl_keyboard::{KeyState, KeymapFormat};
 use wayland_client::protocol::{
     wl_buffer, wl_compositor, wl_registry, wl_seat, wl_shm, wl_shm_pool, wl_surface,
@@ -66,6 +70,12 @@ pub struct State {
     enabled: bool,
     /// A Shift press with no other key since; releasing it toggles `enabled`.
     shift_tap_pending: bool,
+    loop_handle: Option<LoopHandle<'static, State>>,
+    /// Wayland leaves key repeat to clients, so consumed keys are repeated
+    /// here from the compositor's repeat_info.
+    repeat: Option<(u32, KeyInput)>,
+    repeat_timer: Option<RegistrationToken>,
+    repeat_rate: Option<(Duration, Duration)>,
     exit: bool,
 }
 
@@ -115,7 +125,50 @@ impl State {
             last_key_time: 0,
             enabled: true,
             shift_tap_pending: false,
+            loop_handle: None,
+            repeat: None,
+            repeat_timer: None,
+            repeat_rate: None,
             exit: false,
+        }
+    }
+
+    pub fn set_loop_handle(&mut self, handle: LoopHandle<'static, State>) {
+        self.loop_handle = Some(handle);
+    }
+
+    fn start_repeat(&mut self, key: u32, input: KeyInput) {
+        self.stop_repeat();
+        let (Some(handle), Some((delay, interval))) = (self.loop_handle.clone(), self.repeat_rate) else {
+            return;
+        };
+        self.repeat = Some((key, input));
+        let token = handle.insert_source(Timer::from_duration(delay), move |_, _, state: &mut State| {
+            match state.repeat {
+                Some((k, input)) if k == key => {
+                    let response = state.engine.process_key(input);
+                    let commit = match &response {
+                        Response::Commit(t) | Response::CommitAndForward(t) => Some(t.clone()),
+                        _ => None,
+                    };
+                    if response != Response::Ignored {
+                        state.sync_to_client(commit.as_deref());
+                    }
+                    TimeoutAction::ToDuration(interval)
+                }
+                _ => TimeoutAction::Drop,
+            }
+        });
+        match token {
+            Ok(t) => self.repeat_timer = Some(t),
+            Err(e) => log::warn!("key repeat timer: {e}"),
+        }
+    }
+
+    fn stop_repeat(&mut self) {
+        self.repeat = None;
+        if let (Some(handle), Some(token)) = (self.loop_handle.as_ref(), self.repeat_timer.take()) {
+            handle.remove(token);
         }
     }
 
@@ -274,6 +327,9 @@ impl State {
         let is_modifier = matches!(input.key, Key::Modifier(_));
 
         if key_state == KeyState::Released {
+            if self.repeat.is_some_and(|(k, _)| k == key) {
+                self.stop_repeat();
+            }
             if is_shift && self.shift_tap_pending {
                 self.shift_tap_pending = false;
                 self.forward_key(time, key, key_state);
@@ -283,7 +339,7 @@ impl State {
             let swallowed = self.consumed_keys.remove(&key);
             if self.enabled {
                 let response = self.engine.release_key(input);
-                self.apply_response(response, time, key, key_state, swallowed);
+                self.apply_response(response, time, key, key_state, swallowed, None);
             } else if !swallowed {
                 self.forward_key(time, key, key_state);
             }
@@ -291,6 +347,7 @@ impl State {
         }
 
         log::trace!("key {key} -> {input:?}");
+        self.stop_repeat();
         self.shift_tap_pending = self.cfg.shift_tap_toggle
             && is_shift
             && !input.modifiers.ctrl
@@ -322,13 +379,21 @@ impl State {
             self.forward_key(time, key, key_state);
             return;
         }
-        self.apply_response(response, time, key, key_state, false);
+        self.apply_response(response, time, key, key_state, false, Some(input));
     }
 
     /// Act on an engine response for `key`. Presses the engine consumed are
     /// swallowed (and so is their release later); releases are forwarded
     /// whenever their press was, whatever the engine did with them.
-    fn apply_response(&mut self, response: Response, time: u32, key: u32, key_state: KeyState, swallowed: bool) {
+    fn apply_response(
+        &mut self,
+        response: Response,
+        time: u32,
+        key: u32,
+        key_state: KeyState,
+        swallowed: bool,
+        repeat_input: Option<KeyInput>,
+    ) {
         let (consumed, commit) = match response {
             Response::Ignored => (false, None),
             Response::Consumed | Response::Bell => (true, None),
@@ -341,6 +406,9 @@ impl State {
         match key_state {
             KeyState::Pressed if consumed => {
                 self.consumed_keys.insert(key);
+                if let Some(input) = repeat_input {
+                    self.start_repeat(key, input);
+                }
             }
             KeyState::Pressed => self.forward_key(time, key, key_state),
             _ if swallowed => {}
@@ -374,6 +442,7 @@ impl State {
         if self.pending_deactivate {
             self.pending_deactivate = false;
             log::debug!("text input deactivated");
+            self.stop_repeat();
             self.drop_grab();
             self.release_forwarded_keys();
             self.engine.reset();
@@ -444,7 +513,11 @@ impl Dispatch<ZwpInputMethodKeyboardGrabV2, ()> for State {
                     .modifiers(mods_depressed, mods_latched, mods_locked, group);
                 state.apply_layout();
             }
-            Event::RepeatInfo { .. } => {}
+            Event::RepeatInfo { rate, delay } => {
+                state.repeat_rate = (rate > 0 && delay >= 0).then(|| {
+                    (Duration::from_millis(delay as u64), Duration::from_millis((1000 / rate as u64).max(1)))
+                });
+            }
             _ => {}
         }
     }
