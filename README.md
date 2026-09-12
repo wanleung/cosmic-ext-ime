@@ -5,6 +5,12 @@ Native Wayland input method for the [COSMIC](https://system76.com/cosmic) deskto
 [libcangjie2](https://cangjians.github.io/projects/libcangjie/), or any
 [RIME](https://rime.im/) schema via librime (Cangjie, Quick, Jyutping, Pinyin, …).
 
+<p>
+  <img src="data/screenshot-cangjie.png" alt="Cangjie candidates" height="360">
+  <img src="data/screenshot-quick.png" alt="Quick candidates" height="360">
+  <img src="data/screenshot-settings.png" alt="Settings" height="360">
+</p>
+
 ## Why
 
 `cosmic-comp` only implements `zwp_input_method_v2`. Pop!_OS 24.04 ships IBus 1.5.29

@@ -28,6 +28,20 @@
       <li>Settings apply immediately, no restart needed</li>
     </ul>
   </description>
+  <screenshots>
+    <screenshot type="default">
+      <caption>Cangjie candidates in COSMIC Text Editor</caption>
+      <image>https://raw.githubusercontent.com/wanleung/cosmic-ext-ime/main/data/screenshot-cangjie.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Quick (速成) candidates</caption>
+      <image>https://raw.githubusercontent.com/wanleung/cosmic-ext-ime/main/data/screenshot-quick.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Settings</caption>
+      <image>https://raw.githubusercontent.com/wanleung/cosmic-ext-ime/main/data/screenshot-settings.png</image>
+    </screenshot>
+  </screenshots>
   <launchable type="desktop-id">io.github.wanleung.CosmicExtIme.Settings.desktop</launchable>
   <url type="homepage">https://github.com/wanleung/cosmic-ext-ime</url>
   <url type="bugtracker">https://github.com/wanleung/cosmic-ext-ime/issues</url>
