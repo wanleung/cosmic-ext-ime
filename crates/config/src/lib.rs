@@ -114,7 +114,9 @@ impl CharSet {
         match self {
             CharSet::Big5 => "Traditional Chinese, the everyday set",
             CharSet::Hkscs => "Hong Kong characters not in Big5 (e.g. 嘅 啲)",
-            CharSet::Chinese => "Every Chinese character in the table, including rare and simplified forms",
+            CharSet::Chinese => {
+                "Every Chinese character in the table, including rare and simplified forms"
+            }
             CharSet::Kanji => "All CJK Unified Ideographs used in Japanese",
             CharSet::Hiragana => "Type with zj + romaji, e.g. zja → あ",
             CharSet::Katakana => "Type with zj + romaji, e.g. zja → ア",

@@ -91,7 +91,11 @@ impl CangjieEngine {
         code.chars()
             .map(|c| match c {
                 '*' => "＊".to_string(),
-                c => self.radicals.get(&c).cloned().unwrap_or_else(|| c.to_string()),
+                c => self
+                    .radicals
+                    .get(&c)
+                    .cloned()
+                    .unwrap_or_else(|| c.to_string()),
             })
             .collect()
     }
@@ -296,7 +300,9 @@ impl CangjieEngine {
 /// Fold an auto-commit that happened earlier in the key's handling into the
 /// final response for that key.
 fn merge_commit(committed: Option<String>, response: Response) -> Response {
-    let Some(text) = committed else { return response };
+    let Some(text) = committed else {
+        return response;
+    };
     match response {
         Response::Ignored => Response::CommitAndForward(text),
         Response::Consumed | Response::Bell => Response::Commit(text),

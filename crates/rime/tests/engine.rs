@@ -2,7 +2,10 @@ use popeinput_engine::{InputEngine, Key, KeyInput, Modifiers, Response};
 use popeinput_rime::{Config, RimeEngine};
 
 fn key(k: Key) -> KeyInput {
-    KeyInput { key: k, modifiers: Modifiers::default() }
+    KeyInput {
+        key: k,
+        modifiers: Modifiers::default(),
+    }
 }
 
 fn config(schema: &str) -> Config {
@@ -21,12 +24,20 @@ fn cangjie5_schema_composes_and_commits() {
         return;
     }
     let mut e = RimeEngine::new(config("cangjie5")).expect("rime engine");
-    assert!(e.name().contains("倉頡") || e.name().to_lowercase().contains("cangjie"), "name {:?}", e.name());
+    assert!(
+        e.name().contains("倉頡") || e.name().to_lowercase().contains("cangjie"),
+        "name {:?}",
+        e.name()
+    );
 
     assert_eq!(e.process_key(key(Key::Char('a'))), Response::Consumed);
     assert_eq!(e.process_key(key(Key::Char('b'))), Response::Consumed);
     assert!(e.is_composing());
-    assert!(e.preedit().text.contains("日月"), "preedit {:?}", e.preedit().text);
+    assert!(
+        e.preedit().text.contains("日月"),
+        "preedit {:?}",
+        e.preedit().text
+    );
     let cands = e.candidates();
     assert!(cands.iter().any(|c| c.text == "明"), "candidates {cands:?}");
     assert!(cands.len() <= e.page_info().page_size);

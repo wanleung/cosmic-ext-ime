@@ -126,7 +126,11 @@ impl CangjieDb {
     fn query(
         &mut self,
         code: &str,
-        f: unsafe extern "C" fn(*mut sys::Cangjie, *mut c_char, *mut *mut sys::CangjieCharList) -> i32,
+        f: unsafe extern "C" fn(
+            *mut sys::Cangjie,
+            *mut c_char,
+            *mut *mut sys::CangjieCharList,
+        ) -> i32,
     ) -> Result<Vec<Char>, CangjieError> {
         let code = CString::new(code).map_err(|_| CangjieError::Invalid)?;
         let mut list: *mut sys::CangjieCharList = ptr::null_mut();
@@ -170,13 +174,18 @@ impl CangjieDb {
             return None;
         }
         // SAFETY: out is a NUL-terminated static string.
-        Some(unsafe { CStr::from_ptr(out) }.to_string_lossy().into_owned())
+        Some(
+            unsafe { CStr::from_ptr(out) }
+                .to_string_lossy()
+                .into_owned(),
+        )
     }
 
     pub fn is_input_key(&mut self, key: char) -> bool {
         // SAFETY: plain query on a valid handle.
         key.is_ascii()
-            && unsafe { sys::cangjie_is_input_key(self.raw, key as c_char) } as u32 == sys::CANGJIE_OK
+            && unsafe { sys::cangjie_is_input_key(self.raw, key as c_char) } as u32
+                == sys::CANGJIE_OK
     }
 }
 

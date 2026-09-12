@@ -19,7 +19,9 @@ use wayland_protocols::wp::fractional_scale::v1::client::{
     wp_fractional_scale_manager_v1::WpFractionalScaleManagerV1,
     wp_fractional_scale_v1::{self, WpFractionalScaleV1},
 };
-use wayland_protocols::wp::viewporter::client::{wp_viewport::WpViewport, wp_viewporter::WpViewporter};
+use wayland_protocols::wp::viewporter::client::{
+    wp_viewport::WpViewport, wp_viewporter::WpViewporter,
+};
 use wayland_protocols_misc::zwp_input_method_v2::client::{
     zwp_input_method_keyboard_grab_v2::{self, ZwpInputMethodKeyboardGrabV2},
     zwp_input_method_manager_v2::ZwpInputMethodManagerV2,
@@ -139,12 +141,14 @@ impl State {
 
     fn start_repeat(&mut self, key: u32, input: KeyInput) {
         self.stop_repeat();
-        let (Some(handle), Some((delay, interval))) = (self.loop_handle.clone(), self.repeat_rate) else {
+        let (Some(handle), Some((delay, interval))) = (self.loop_handle.clone(), self.repeat_rate)
+        else {
             return;
         };
         self.repeat = Some((key, input));
-        let token = handle.insert_source(Timer::from_duration(delay), move |_, _, state: &mut State| {
-            match state.repeat {
+        let token = handle.insert_source(
+            Timer::from_duration(delay),
+            move |_, _, state: &mut State| match state.repeat {
                 Some((k, input)) if k == key => {
                     let response = state.engine.process_key(input);
                     let commit = match &response {
@@ -157,8 +161,8 @@ impl State {
                     TimeoutAction::ToDuration(interval)
                 }
                 _ => TimeoutAction::Drop,
-            }
-        });
+            },
+        );
         match token {
             Ok(t) => self.repeat_timer = Some(t),
             Err(e) => log::warn!("key repeat timer: {e}"),
@@ -196,11 +200,12 @@ impl State {
             }
         }
         if cfg.popup_font_size != self.cfg.popup_font_size {
-            self.popup.set_style(Style::from_cosmic(cfg.popup_font_size as f32));
+            self.popup
+                .set_style(Style::from_cosmic(cfg.popup_font_size as f32));
         }
         self.cfg = cfg;
-        self.follow_layout = self.cfg.follow_layout
-            && self.keymap.as_ref().is_some_and(|k| k.num_layouts() > 1);
+        self.follow_layout =
+            self.cfg.follow_layout && self.keymap.as_ref().is_some_and(|k| k.num_layouts() > 1);
         if self.follow_layout {
             self.apply_layout();
         } else {
@@ -210,7 +215,8 @@ impl State {
 
     /// The COSMIC theme changed on disk.
     pub fn reload_theme(&mut self) {
-        self.popup.set_style(Style::from_cosmic(self.cfg.popup_font_size as f32));
+        self.popup
+            .set_style(Style::from_cosmic(self.cfg.popup_font_size as f32));
     }
 
     fn set_enabled(&mut self, enabled: bool) {
@@ -218,7 +224,11 @@ impl State {
             return;
         }
         self.enabled = enabled;
-        log::info!("{} input {}", self.engine.name(), if enabled { "on" } else { "off" });
+        log::info!(
+            "{} input {}",
+            self.engine.name(),
+            if enabled { "on" } else { "off" }
+        );
         if !enabled && self.engine.is_composing() {
             self.engine.reset();
             self.sync_to_client(None);
@@ -234,7 +244,9 @@ impl State {
         if !self.follow_layout {
             return;
         }
-        let (Some(keymap), Some(state)) = (&self.keymap, &self.xkb_state) else { return };
+        let (Some(keymap), Some(state)) = (&self.keymap, &self.xkb_state) else {
+            return;
+        };
         let group = state.serialize_layout(xkb::STATE_LAYOUT_EFFECTIVE);
         let name = keymap.layout_get_name(group).to_string();
         let chinese = self.cfg.is_chinese_layout(&name);
@@ -283,7 +295,8 @@ impl State {
                 }
                 self.xkb_state = Some(xkb::State::new(&keymap));
                 self.keymap = Some(keymap);
-                self.virtual_keyboard.keymap(format as u32, vk_fd.as_fd(), size);
+                self.virtual_keyboard
+                    .keymap(format as u32, vk_fd.as_fd(), size);
                 self.keymap_fd = Some(vk_fd);
                 self.apply_layout();
             }
@@ -309,12 +322,15 @@ impl State {
     fn release_forwarded_keys(&mut self) {
         let time = self.last_key_time;
         for key in std::mem::take(&mut self.forwarded_keys) {
-            self.virtual_keyboard.key(time, key, KeyState::Released as u32);
+            self.virtual_keyboard
+                .key(time, key, KeyState::Released as u32);
         }
     }
 
     fn handle_key(&mut self, time: u32, key: u32, key_state: WEnum<KeyState>) {
-        let WEnum::Value(key_state) = key_state else { return };
+        let WEnum::Value(key_state) = key_state else {
+            return;
+        };
         self.last_key_time = time;
         let keycode = xkb::Keycode::new(key + 8);
 
@@ -425,7 +441,8 @@ impl State {
         }
         let preedit = self.engine.preedit();
         let cursor = preedit.cursor as i32;
-        self.input_method.set_preedit_string(preedit.text.clone(), cursor, cursor);
+        self.input_method
+            .set_preedit_string(preedit.text.clone(), cursor, cursor);
         self.input_method.commit(self.done_serial);
 
         let candidates = self.engine.candidates();
@@ -480,10 +497,14 @@ impl Dispatch<ZwpInputMethodV2, ()> for State {
         match event {
             Event::Activate => state.pending_activate = true,
             Event::Deactivate => state.pending_deactivate = true,
-            Event::SurroundingText { .. } | Event::TextChangeCause { .. } | Event::ContentType { .. } => {}
+            Event::SurroundingText { .. }
+            | Event::TextChangeCause { .. }
+            | Event::ContentType { .. } => {}
             Event::Done => state.handle_done(),
             Event::Unavailable => {
-                log::error!("input method unavailable: another input method is already active on this seat");
+                log::error!(
+                    "input method unavailable: another input method is already active on this seat"
+                );
                 state.exit = true;
             }
             _ => {}
@@ -503,8 +524,19 @@ impl Dispatch<ZwpInputMethodKeyboardGrabV2, ()> for State {
         use zwp_input_method_keyboard_grab_v2::Event;
         match event {
             Event::Keymap { format, fd, size } => state.handle_keymap(format, fd, size),
-            Event::Key { time, key, state: key_state, .. } => state.handle_key(time, key, key_state),
-            Event::Modifiers { mods_depressed, mods_latched, mods_locked, group, .. } => {
+            Event::Key {
+                time,
+                key,
+                state: key_state,
+                ..
+            } => state.handle_key(time, key, key_state),
+            Event::Modifiers {
+                mods_depressed,
+                mods_latched,
+                mods_locked,
+                group,
+                ..
+            } => {
                 if let Some(xkb_state) = state.xkb_state.as_mut() {
                     xkb_state.update_mask(mods_depressed, mods_latched, mods_locked, 0, 0, group);
                 }
@@ -515,7 +547,10 @@ impl Dispatch<ZwpInputMethodKeyboardGrabV2, ()> for State {
             }
             Event::RepeatInfo { rate, delay } => {
                 state.repeat_rate = (rate > 0 && delay >= 0).then(|| {
-                    (Duration::from_millis(delay as u64), Duration::from_millis((1000 / rate as u64).max(1)))
+                    (
+                        Duration::from_millis(delay as u64),
+                        Duration::from_millis((1000 / rate as u64).max(1)),
+                    )
                 });
             }
             _ => {}
@@ -532,7 +567,13 @@ impl Dispatch<ZwpInputPopupSurfaceV2, ()> for State {
         _: &Connection,
         _: &QueueHandle<Self>,
     ) {
-        if let zwp_input_popup_surface_v2::Event::TextInputRectangle { x, y, width, height } = event {
+        if let zwp_input_popup_surface_v2::Event::TextInputRectangle {
+            x,
+            y,
+            width,
+            height,
+        } = event
+        {
             log::trace!("text input rectangle {x},{y} {width}x{height}");
         }
     }

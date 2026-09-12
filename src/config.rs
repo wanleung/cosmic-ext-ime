@@ -33,7 +33,10 @@ fn publish_rime_state(error: Option<&anyhow::Error>) {
     let state = RimeState {
         schemas: popeinput_rime::schemas()
             .into_iter()
-            .map(|s| RimeSchema { id: s.id, name: s.name })
+            .map(|s| RimeSchema {
+                id: s.id,
+                name: s.name,
+            })
             .collect(),
         error: error.map(|e| format!("{e:#}")).unwrap_or_default(),
     };

@@ -12,9 +12,12 @@ use popeinput_engine::{Candidate, PageInfo};
 use wayland_client::protocol::{wl_buffer, wl_compositor, wl_shm, wl_shm_pool, wl_surface};
 use wayland_client::QueueHandle;
 use wayland_protocols::wp::fractional_scale::v1::client::{
-    wp_fractional_scale_manager_v1::WpFractionalScaleManagerV1, wp_fractional_scale_v1::WpFractionalScaleV1,
+    wp_fractional_scale_manager_v1::WpFractionalScaleManagerV1,
+    wp_fractional_scale_v1::WpFractionalScaleV1,
 };
-use wayland_protocols::wp::viewporter::client::{wp_viewport::WpViewport, wp_viewporter::WpViewporter};
+use wayland_protocols::wp::viewporter::client::{
+    wp_viewport::WpViewport, wp_viewporter::WpViewporter,
+};
 use wayland_protocols_misc::zwp_input_method_v2::client::{
     zwp_input_method_v2::ZwpInputMethodV2, zwp_input_popup_surface_v2::ZwpInputPopupSurfaceV2,
 };
@@ -29,12 +32,22 @@ pub struct Rgba(pub [f32; 4]);
 impl Rgba {
     fn premultiplied_bytes(self) -> [u8; 4] {
         let [r, g, b, a] = self.0;
-        [(b * a * 255.0) as u8, (g * a * 255.0) as u8, (r * a * 255.0) as u8, (a * 255.0) as u8]
+        [
+            (b * a * 255.0) as u8,
+            (g * a * 255.0) as u8,
+            (r * a * 255.0) as u8,
+            (a * 255.0) as u8,
+        ]
     }
 
     fn text_color(self) -> Color {
         let [r, g, b, a] = self.0;
-        Color::rgba((r * 255.0) as u8, (g * 255.0) as u8, (b * 255.0) as u8, (a * 255.0) as u8)
+        Color::rgba(
+            (r * 255.0) as u8,
+            (g * 255.0) as u8,
+            (b * 255.0) as u8,
+            (a * 255.0) as u8,
+        )
     }
 
     fn with_alpha(self, a: f32) -> Rgba {
@@ -117,7 +130,9 @@ where
             log::info!("compositor lacks fractional scaling; popup falls back to integer scale");
         }
         let mut font_system = FontSystem::new();
-        font_system.db_mut().set_sans_serif_family("Noto Sans CJK HK");
+        font_system
+            .db_mut()
+            .set_sans_serif_family("Noto Sans CJK HK");
         Popup {
             shm: shm.clone(),
             surface,
@@ -168,7 +183,13 @@ where
     }
 
     /// Show `header` (the typed radicals) above the numbered candidates.
-    pub fn show(&mut self, header: &str, candidates: &[Candidate], page: PageInfo, selected: usize) {
+    pub fn show(
+        &mut self,
+        header: &str,
+        candidates: &[Candidate],
+        page: PageInfo,
+        selected: usize,
+    ) {
         if header.is_empty() && candidates.is_empty() {
             self.hide();
             return;
@@ -182,10 +203,20 @@ where
         let base = Attrs::new().family(Family::SansSerif);
 
         let mut spans: Vec<(String, Attrs)> = Vec::new();
-        spans.push((header.to_string(), base.clone().color(fg).weight(Weight::BOLD)));
+        spans.push((
+            header.to_string(),
+            base.clone().color(fg).weight(Weight::BOLD),
+        ));
         for (i, c) in candidates.iter().enumerate() {
-            let color = if i == selected && candidates.len() > 1 { highlight } else { fg };
-            spans.push((format!("\n{}. {}", i + 1, c.text), base.clone().color(color)));
+            let color = if i == selected && candidates.len() > 1 {
+                highlight
+            } else {
+                fg
+            };
+            spans.push((
+                format!("\n{}. {}", i + 1, c.text),
+                base.clone().color(color),
+            ));
             if let Some(h) = &c.hint {
                 spans.push((format!("  {h}"), base.clone().color(hint)));
             }
@@ -242,9 +273,14 @@ where
             self.style.radius * scale,
         );
         let origin = inset.round() as i32;
-        buffer.draw(&mut self.font_system, &mut self.swash_cache, fg, |x, y, w, h, color| {
-            canvas.blend_rect(x + origin, y + origin, w as i32, h as i32, color);
-        });
+        buffer.draw(
+            &mut self.font_system,
+            &mut self.swash_cache,
+            fg,
+            |x, y, w, h, color| {
+                canvas.blend_rect(x + origin, y + origin, w as i32, h as i32, color);
+            },
+        );
 
         match &self.viewport {
             Some(viewport) => viewport.set_destination(logical_w, logical_h),
@@ -267,7 +303,12 @@ struct Canvas {
 }
 
 impl Canvas {
-    fn new<S>(shm: &wl_shm::WlShm, qh: &QueueHandle<S>, width: i32, height: i32) -> anyhow::Result<Self>
+    fn new<S>(
+        shm: &wl_shm::WlShm,
+        qh: &QueueHandle<S>,
+        width: i32,
+        height: i32,
+    ) -> anyhow::Result<Self>
     where
         S: wayland_client::Dispatch<wl_shm_pool::WlShmPool, ()>
             + wayland_client::Dispatch<wl_buffer::WlBuffer, ()>
@@ -283,7 +324,12 @@ impl Canvas {
         let pool = shm.create_pool(file.as_fd(), size as i32, qh, ());
         let buffer = pool.create_buffer(0, width, height, stride, wl_shm::Format::Argb8888, qh, ());
         pool.destroy();
-        Ok(Canvas { buffer, map, width, height })
+        Ok(Canvas {
+            buffer,
+            map,
+            width,
+            height,
+        })
     }
 
     /// Rounded rectangle with a border; outside the shape stays transparent.
@@ -298,7 +344,8 @@ impl Canvas {
                 // Signed distance from the rounded-rect edge (negative inside).
                 let dx = (px - w / 2.0).abs() - (w / 2.0 - r);
                 let dy = (py - h / 2.0).abs() - (h / 2.0 - r);
-                let d = (dx.max(0.0).powi(2) + dy.max(0.0).powi(2)).sqrt() + dx.max(dy).min(0.0) - r;
+                let d =
+                    (dx.max(0.0).powi(2) + dy.max(0.0).powi(2)).sqrt() + dx.max(dy).min(0.0) - r;
                 if d > 0.0 {
                     continue;
                 }

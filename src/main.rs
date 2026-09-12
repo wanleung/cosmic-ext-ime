@@ -59,7 +59,8 @@ fn main() -> Result<()> {
     );
     log::info!("popeinput started ({})", state.engine_name());
 
-    let mut event_loop: EventLoop<'static, State> = EventLoop::try_new().context("creating event loop")?;
+    let mut event_loop: EventLoop<'static, State> =
+        EventLoop::try_new().context("creating event loop")?;
     let handle = event_loop.handle();
     state.set_loop_handle(handle.clone());
     WaylandSource::new(conn, queue)
@@ -76,12 +77,19 @@ fn main() -> Result<()> {
         .map_err(|e| anyhow::anyhow!("registering config watcher: {e}"))?;
 
     for (id, version) in [
-        (cosmic_theme::THEME_MODE_ID, cosmic_theme::ThemeMode::VERSION),
+        (
+            cosmic_theme::THEME_MODE_ID,
+            cosmic_theme::ThemeMode::VERSION,
+        ),
         (cosmic_theme::DARK_THEME_ID, cosmic_theme::Theme::VERSION),
         (cosmic_theme::LIGHT_THEME_ID, cosmic_theme::Theme::VERSION),
     ] {
-        let Ok(theme_cfg) = cosmic_config::Config::new(id, version) else { continue };
-        let Ok(source) = ConfigWatchSource::new(&theme_cfg) else { continue };
+        let Ok(theme_cfg) = cosmic_config::Config::new(id, version) else {
+            continue;
+        };
+        let Ok(source) = ConfigWatchSource::new(&theme_cfg) else {
+            continue;
+        };
         handle
             .insert_source(source, |_, _, state| state.reload_theme())
             .map_err(|e| anyhow::anyhow!("registering theme watcher: {e}"))?;

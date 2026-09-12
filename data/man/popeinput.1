@@ -1,0 +1,32 @@
+.TH POPEINPUT 1 "September 2026" "popeinput 0.1.0" "User Commands"
+.SH NAME
+popeinput \- Cangjie, Quick and RIME input method for the COSMIC desktop
+.SH SYNOPSIS
+.B popeinput
+.SH DESCRIPTION
+.B popeinput
+is a native Wayland input method (zwp_input_method_v2) for COSMIC. It provides
+Cangjie and Quick (倉頡／速成) through libcangjie2, or any RIME schema through
+librime, with a candidate popup that follows the COSMIC theme.
+.PP
+It is started automatically with the COSMIC session. Only one input method may
+be active on a seat: stop IBus or Fcitx5 first, and make sure GTK_IM_MODULE,
+QT_IM_MODULE and XMODIFIERS are not set, so toolkits use Wayland text-input.
+.PP
+Chinese input is enabled while a Chinese keyboard layout is active in COSMIC
+Settings > Keyboard > Input Sources; switch with Super+Space.
+.SH CONFIGURATION
+Settings are stored via cosmic-config in
+.I ~/.config/cosmic/io.github.wanleung.popeinput/v1/
+and applied live. Use
+.BR popeinput-settings (1)
+to change them. RIME user data lives in
+.IR ~/.local/share/popeinput/rime/ .
+.SH ENVIRONMENT
+.TP
+.B RUST_LOG
+Log level filter, e.g. RUST_LOG=debug.
+.SH SEE ALSO
+.BR popeinput-settings (1)
+.SH AUTHOR
+Wan Leung Wong

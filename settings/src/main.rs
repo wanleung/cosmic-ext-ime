@@ -7,7 +7,8 @@ use cosmic::iced::{Length, Size};
 use cosmic::widget::{self, settings};
 use cosmic::{executor, Application, Element};
 use popeinput_config::{
-    CangjieVersion, CharSet, Engine, Mode, PopeinputConfig, RimeState, APP_ID, CONFIG_VERSION, STATE_VERSION,
+    CangjieVersion, CharSet, Engine, Mode, PopeinputConfig, RimeState, APP_ID, CONFIG_VERSION,
+    STATE_VERSION,
 };
 
 const SETTINGS_APP_ID: &str = "io.github.wanleung.popeinput.Settings";
@@ -49,13 +50,21 @@ struct App {
 impl App {
     fn rebuild_schema_labels(&mut self) {
         self.schema_labels = std::iter::once("RIME 預設 (default)".to_string())
-            .chain(self.rime.schemas.iter().map(|s| format!("{} ({})", s.name, s.id)))
+            .chain(
+                self.rime
+                    .schemas
+                    .iter()
+                    .map(|s| format!("{} ({})", s.name, s.id)),
+            )
             .collect();
     }
 }
 
 impl App {
-    fn write(&mut self, apply: impl FnOnce(&mut PopeinputConfig, &Config) -> Result<bool, cosmic_config::Error>) {
+    fn write(
+        &mut self,
+        apply: impl FnOnce(&mut PopeinputConfig, &Config) -> Result<bool, cosmic_config::Error>,
+    ) {
         let Some(handler) = self.handler.as_ref() else {
             log::error!("no config store available; change not saved");
             return;
@@ -84,8 +93,13 @@ impl Application for App {
         let handler = PopeinputConfig::handler()
             .map_err(|e| log::error!("opening cosmic-config: {e}"))
             .ok();
-        let cfg = handler.as_ref().map(PopeinputConfig::load).unwrap_or_default();
-        let rime = RimeState::handler().map(|h| RimeState::load(&h)).unwrap_or_default();
+        let cfg = handler
+            .as_ref()
+            .map(PopeinputConfig::load)
+            .unwrap_or_default();
+        let rime = RimeState::handler()
+            .map(|h| RimeState::load(&h))
+            .unwrap_or_default();
         let mut app = App {
             core,
             handler,
@@ -106,10 +120,18 @@ impl Application for App {
 
     fn subscription(&self) -> cosmic::iced::Subscription<Message> {
         cosmic::iced::Subscription::batch([
-            cosmic_config::config_subscription::<_, PopeinputConfig>(0u32, APP_ID.into(), CONFIG_VERSION)
-                .map(|update| Message::Reloaded(update.config)),
-            cosmic_config::config_state_subscription::<_, RimeState>(1u32, APP_ID.into(), STATE_VERSION)
-                .map(|update| Message::RimeStateChanged(update.config)),
+            cosmic_config::config_subscription::<_, PopeinputConfig>(
+                0u32,
+                APP_ID.into(),
+                CONFIG_VERSION,
+            )
+            .map(|update| Message::Reloaded(update.config)),
+            cosmic_config::config_state_subscription::<_, RimeState>(
+                1u32,
+                APP_ID.into(),
+                STATE_VERSION,
+            )
+            .map(|update| Message::RimeStateChanged(update.config)),
         ])
     }
 
@@ -123,7 +145,11 @@ impl Application for App {
                 let id = if i == 0 {
                     String::new()
                 } else {
-                    self.rime.schemas.get(i - 1).map(|s| s.id.clone()).unwrap_or_default()
+                    self.rime
+                        .schemas
+                        .get(i - 1)
+                        .map(|s| s.id.clone())
+                        .unwrap_or_default()
                 };
                 self.write(|c, h| c.set_rime_schema(h, id));
             }
@@ -163,17 +189,26 @@ impl Application for App {
         let cfg = &self.cfg;
         let engine_idx = Engine::ALL.iter().position(|e| *e == cfg.engine);
         let mode_idx = Mode::ALL.iter().position(|m| *m == cfg.mode);
-        let version_idx = CangjieVersion::ALL.iter().position(|v| *v == cfg.cangjie_version);
+        let version_idx = CangjieVersion::ALL
+            .iter()
+            .position(|v| *v == cfg.cangjie_version);
         let is_rime = cfg.engine == Engine::Rime;
 
         let engine = settings::section()
             .title("輸入引擎 Engine")
-            .add(settings::item("引擎 Engine", widget::dropdown(&self.engine_labels, engine_idx, Message::Engine)));
+            .add(settings::item(
+                "引擎 Engine",
+                widget::dropdown(&self.engine_labels, engine_idx, Message::Engine),
+            ));
 
         let schema_idx = if cfg.rime_schema.is_empty() {
             Some(0)
         } else {
-            self.rime.schemas.iter().position(|s| s.id == cfg.rime_schema).map(|i| i + 1)
+            self.rime
+                .schemas
+                .iter()
+                .position(|s| s.id == cfg.rime_schema)
+                .map(|i| i + 1)
         };
         let rime_hint = if !self.rime.error.is_empty() {
             self.rime.error.clone()
@@ -204,11 +239,21 @@ impl Application for App {
             ))
             .add(settings::item(
                 "每頁候選字數 Candidates per page",
-                widget::spin_button(cfg.page_size.to_string(), "candidates per page", cfg.page_size, 1, 1, 9, Message::PageSize),
+                widget::spin_button(
+                    cfg.page_size.to_string(),
+                    "candidates per page",
+                    cfg.page_size,
+                    1,
+                    1,
+                    9,
+                    Message::PageSize,
+                ),
             ))
             .add(
                 settings::item::builder("全形字元 Full-width characters")
-                    .description("Space, digits and punctuation commit their full-width forms while idle")
+                    .description(
+                        "Space, digits and punctuation commit their full-width forms while idle",
+                    )
                     .toggler(cfg.fullwidth_chars, Message::FullwidthChars),
             );
 
@@ -242,10 +287,20 @@ impl Application for App {
                     .toggler(cfg.shift_tap_toggle, Message::ShiftTap),
             );
 
-        let popup = settings::section().title("候選字視窗 Candidate window").add(settings::item(
-            "字體大小 Font size",
-            widget::spin_button(cfg.popup_font_size.to_string(), "font size", cfg.popup_font_size, 1, 8, 48, Message::FontSize),
-        ));
+        let popup = settings::section()
+            .title("候選字視窗 Candidate window")
+            .add(settings::item(
+                "字體大小 Font size",
+                widget::spin_button(
+                    cfg.popup_font_size.to_string(),
+                    "font size",
+                    cfg.popup_font_size,
+                    1,
+                    8,
+                    48,
+                    Message::FontSize,
+                ),
+            ));
 
         let note = widget::text::caption("Changes apply immediately — no restart needed.");
 

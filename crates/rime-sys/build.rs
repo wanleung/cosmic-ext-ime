@@ -22,7 +22,11 @@ fn main() {
     for path in &lib.include_paths {
         builder = builder.clang_arg(format!("-I{}", path.display()));
     }
-    let bindings = builder.generate().expect("failed to generate librime bindings");
+    let bindings = builder
+        .generate()
+        .expect("failed to generate librime bindings");
     let out = PathBuf::from(env::var("OUT_DIR").unwrap()).join("bindings.rs");
-    bindings.write_to_file(out).expect("failed to write bindings.rs");
+    bindings
+        .write_to_file(out)
+        .expect("failed to write bindings.rs");
 }

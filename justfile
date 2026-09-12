@@ -12,6 +12,7 @@ settings-src := cargo-target-dir / 'release' / name + '-settings'
 settings-dst := base-dir / 'bin' / name + '-settings'
 
 applications-dst := base-dir / 'share' / 'applications'
+man-dst := base-dir / 'share' / 'man' / 'man1'
 autostart-dst := absolute_path(clean(rootdir / 'etc' / 'xdg' / 'autostart'))
 
 default: build-release
@@ -47,11 +48,14 @@ install:
     install -Dm0644 data/{{APPID}}.desktop {{applications-dst}}/{{APPID}}.desktop
     install -Dm0644 data/{{APPID}}.Settings.desktop {{applications-dst}}/{{APPID}}.Settings.desktop
     install -Dm0644 data/{{APPID}}.desktop {{autostart-dst}}/{{APPID}}.desktop
+    install -Dm0644 data/man/popeinput.1 {{man-dst}}/popeinput.1
+    install -Dm0644 data/man/popeinput-settings.1 {{man-dst}}/popeinput-settings.1
 
 uninstall:
     rm -f {{bin-dst}} {{settings-dst}}
     rm -f {{applications-dst}}/{{APPID}}.desktop {{applications-dst}}/{{APPID}}.Settings.desktop
     rm -f {{autostart-dst}}/{{APPID}}.desktop
+    rm -f {{man-dst}}/popeinput.1 {{man-dst}}/popeinput-settings.1
 
 # Per-user install under ~/.local, no root needed
 install-user: build-release
