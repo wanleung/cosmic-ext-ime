@@ -1,5 +1,5 @@
-name := 'popeinput'
-export APPID := 'io.github.wanleung.popeinput'
+name := 'cosmic-ext-ime'
+export APPID := 'io.github.wanleung.CosmicExtIme'
 
 rootdir := ''
 prefix := '/usr'
@@ -40,7 +40,7 @@ check:
     cargo clippy --workspace --all-targets
 
 run *args:
-    env RUST_LOG=debug cargo run --release -p popeinput {{args}}
+    env RUST_LOG=debug cargo run --release -p cosmic-ext-ime {{args}}
 
 install:
     install -Dm0755 {{bin-src}} {{bin-dst}}
@@ -48,25 +48,35 @@ install:
     install -Dm0644 data/{{APPID}}.desktop {{applications-dst}}/{{APPID}}.desktop
     install -Dm0644 data/{{APPID}}.Settings.desktop {{applications-dst}}/{{APPID}}.Settings.desktop
     install -Dm0644 data/{{APPID}}.desktop {{autostart-dst}}/{{APPID}}.desktop
-    install -Dm0644 data/man/popeinput.1 {{man-dst}}/popeinput.1
-    install -Dm0644 data/man/popeinput-settings.1 {{man-dst}}/popeinput-settings.1
+    install -Dm0644 data/man/cosmic-ext-ime.1 {{man-dst}}/cosmic-ext-ime.1
+    install -Dm0644 data/man/cosmic-ext-ime-settings.1 {{man-dst}}/cosmic-ext-ime-settings.1
 
 uninstall:
     rm -f {{bin-dst}} {{settings-dst}}
     rm -f {{applications-dst}}/{{APPID}}.desktop {{applications-dst}}/{{APPID}}.Settings.desktop
     rm -f {{autostart-dst}}/{{APPID}}.desktop
-    rm -f {{man-dst}}/popeinput.1 {{man-dst}}/popeinput-settings.1
+    rm -f {{man-dst}}/cosmic-ext-ime.1 {{man-dst}}/cosmic-ext-ime-settings.1
+
+home := env('HOME')
+user-base := home / '.local'
 
 # Per-user install under ~/.local, no root needed
 install-user: build-release
-    just rootdir=~/.local prefix='' install
-    install -Dm0644 data/{{APPID}}.desktop ~/.config/autostart/{{APPID}}.desktop
-    -update-desktop-database ~/.local/share/applications
+    install -Dm0755 {{bin-src}} {{user-base}}/bin/{{name}}
+    install -Dm0755 {{settings-src}} {{user-base}}/bin/{{name}}-settings
+    install -Dm0644 data/{{APPID}}.desktop {{user-base}}/share/applications/{{APPID}}.desktop
+    install -Dm0644 data/{{APPID}}.Settings.desktop {{user-base}}/share/applications/{{APPID}}.Settings.desktop
+    install -Dm0644 data/{{APPID}}.desktop {{home}}/.config/autostart/{{APPID}}.desktop
+    install -Dm0644 data/man/{{name}}.1 {{user-base}}/share/man/man1/{{name}}.1
+    install -Dm0644 data/man/{{name}}-settings.1 {{user-base}}/share/man/man1/{{name}}-settings.1
+    -update-desktop-database {{user-base}}/share/applications
 
 uninstall-user:
-    just rootdir=~/.local prefix='' uninstall
-    rm -f ~/.config/autostart/{{APPID}}.desktop
-    -update-desktop-database ~/.local/share/applications
+    rm -f {{user-base}}/bin/{{name}} {{user-base}}/bin/{{name}}-settings
+    rm -f {{user-base}}/share/applications/{{APPID}}.desktop {{user-base}}/share/applications/{{APPID}}.Settings.desktop
+    rm -f {{home}}/.config/autostart/{{APPID}}.desktop
+    rm -f {{user-base}}/share/man/man1/{{name}}.1 {{user-base}}/share/man/man1/{{name}}-settings.1
+    -update-desktop-database {{user-base}}/share/applications
 
 # Vendor dependencies into vendor.tar so the package builds offline
 vendor:

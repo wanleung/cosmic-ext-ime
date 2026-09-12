@@ -1,5 +1,5 @@
-use popeinput_cangjie::{CangjieEngine, Config, Mode};
-use popeinput_engine::{InputEngine, Key, KeyInput, Modifiers, Response};
+use cosmic_ext_ime_cangjie::{CangjieEngine, Config, Mode};
+use cosmic_ext_ime_engine::{InputEngine, Key, KeyInput, Modifiers, Response};
 
 fn key(k: Key) -> KeyInput {
     KeyInput {

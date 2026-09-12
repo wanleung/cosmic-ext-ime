@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=Input Method Settings
+Name[zh_HK]=輸入法設定
+Comment=Configure Cangjie, Quick and RIME input for COSMIC
+Comment[zh_HK]=設定 COSMIC 的倉頡、速成及 RIME 輸入法
+Exec=cosmic-ext-ime-settings
+Icon=input-keyboard-symbolic
+Terminal=false
+Type=Application
+Categories=Settings;DesktopSettings;
+Keywords=cosmic;ime;input method;cangjie;quick;rime;chinese;倉頡;速成;輸入法;

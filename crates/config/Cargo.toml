@@ -1,10 +1,10 @@
 [package]
-name = "popeinput-config"
+name = "cosmic-ext-ime-config"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
-description = "Settings schema shared by the popeinput daemon and its settings app (stored via cosmic-config)"
+description = "Settings schema shared by the cosmic-ext-ime daemon and its settings app (stored via cosmic-config)"
 
 [dependencies]
 cosmic-config = { workspace = true }

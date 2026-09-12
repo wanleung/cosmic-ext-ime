@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=COSMIC Input Method
+Name[zh_HK]=COSMIC 輸入法
+Comment=Cangjie, Quick and RIME input for COSMIC
+Comment[zh_HK]=COSMIC 倉頡、速成及 RIME 輸入法
+Exec=cosmic-ext-ime
+Icon=input-keyboard-symbolic
+Terminal=false
+Type=Application
+NoDisplay=true
+X-GNOME-Autostart-enabled=true
+OnlyShowIn=COSMIC;

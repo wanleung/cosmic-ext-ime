@@ -1,12 +1,12 @@
 [package]
-name = "popeinput-cangjie"
+name = "cosmic-ext-ime-cangjie"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
-description = "Cangjie / Quick input engine for popeinput, backed by libcangjie2"
+description = "Cangjie / Quick input engine for cosmic-ext-ime, backed by libcangjie2"
 
 [dependencies]
-popeinput-engine = { path = "../engine" }
+cosmic-ext-ime-engine = { path = "../engine" }
 cangjie-sys = { path = "../cangjie-sys" }
 log = "0.4"

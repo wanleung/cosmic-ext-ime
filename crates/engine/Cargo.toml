@@ -1,9 +1,9 @@
 [package]
-name = "popeinput-engine"
+name = "cosmic-ext-ime-engine"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
-description = "Engine trait and shared types for popeinput"
+description = "Engine trait and shared types for cosmic-ext-ime"
 
 [dependencies]

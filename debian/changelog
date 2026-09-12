@@ -1,4 +1,4 @@
-popeinput (0.1.0) noble; urgency=medium
+cosmic-ext-ime (0.1.0) noble; urgency=medium
 
   * Initial release: Cangjie/Quick via libcangjie2, RIME via librime,
     candidate popup, libcosmic settings app, COSMIC input-source toggling.

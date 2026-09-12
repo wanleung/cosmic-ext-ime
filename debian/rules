@@ -1,6 +1,6 @@
 #!/usr/bin/make -f
 
-export DESTDIR = debian/popeinput
+export DESTDIR = debian/cosmic-ext-ime
 export VENDOR ?= 1
 
 %:

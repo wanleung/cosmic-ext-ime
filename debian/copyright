@@ -1,6 +1,6 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
-Upstream-Name: popeinput
-Source: https://github.com/wanleung/popeinput
+Upstream-Name: cosmic-ext-ime
+Source: https://github.com/wanleung/cosmic-ext-ime
 
 Files: *
 Copyright: 2026 Wan Leung Wong

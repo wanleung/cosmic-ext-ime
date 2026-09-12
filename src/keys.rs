@@ -1,4 +1,4 @@
-use popeinput_engine::{Key, KeyInput, ModifierKey, Modifiers};
+use cosmic_ext_ime_engine::{Key, KeyInput, ModifierKey, Modifiers};
 use xkbcommon::xkb;
 
 pub fn keysym(state: &xkb::State, keycode: xkb::Keycode) -> xkb::Keysym {

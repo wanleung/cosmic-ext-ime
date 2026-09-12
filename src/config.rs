@@ -2,9 +2,11 @@
 
 use anyhow::{Context, Result};
 use cosmic_config::CosmicConfigEntry;
-use popeinput_cangjie::{CangjieEngine, Config as EngineConfig, Filter, Mode, Version};
-use popeinput_config::{CangjieVersion, CharSet, Engine, PopeinputConfig, RimeSchema, RimeState};
-use popeinput_engine::InputEngine;
+use cosmic_ext_ime_cangjie::{CangjieEngine, Config as EngineConfig, Filter, Mode, Version};
+use cosmic_ext_ime_config::{
+    CangjieVersion, CharSet, Engine, PopeinputConfig, RimeSchema, RimeState,
+};
+use cosmic_ext_ime_engine::InputEngine;
 
 pub fn build_engine(cfg: &PopeinputConfig) -> Result<Box<dyn InputEngine>> {
     match cfg.engine {
@@ -18,12 +20,12 @@ pub fn build_engine(cfg: &PopeinputConfig) -> Result<Box<dyn InputEngine>> {
 }
 
 fn build_rime(cfg: &PopeinputConfig) -> Result<Box<dyn InputEngine>> {
-    let rime_cfg = popeinput_rime::Config {
+    let rime_cfg = cosmic_ext_ime_rime::Config {
         schema: Some(cfg.rime_schema.clone()).filter(|s| !s.is_empty()),
         page_size: cfg.page_size as usize,
-        ..popeinput_rime::Config::default()
+        ..cosmic_ext_ime_rime::Config::default()
     };
-    let engine = popeinput_rime::RimeEngine::new(rime_cfg)
+    let engine = cosmic_ext_ime_rime::RimeEngine::new(rime_cfg)
         .map_err(|e| anyhow::anyhow!(e))
         .context("failed to start RIME")?;
     Ok(Box::new(engine))
@@ -31,7 +33,7 @@ fn build_rime(cfg: &PopeinputConfig) -> Result<Box<dyn InputEngine>> {
 
 fn publish_rime_state(error: Option<&anyhow::Error>) {
     let state = RimeState {
-        schemas: popeinput_rime::schemas()
+        schemas: cosmic_ext_ime_rime::schemas()
             .into_iter()
             .map(|s| RimeSchema {
                 id: s.id,
@@ -52,8 +54,8 @@ fn publish_rime_state(error: Option<&anyhow::Error>) {
 
 fn build_cangjie(cfg: &PopeinputConfig) -> Result<Box<dyn InputEngine>> {
     let mode = match cfg.mode {
-        popeinput_config::Mode::Cangjie => Mode::Cangjie,
-        popeinput_config::Mode::Quick => Mode::Quick,
+        cosmic_ext_ime_config::Mode::Cangjie => Mode::Cangjie,
+        cosmic_ext_ime_config::Mode::Quick => Mode::Quick,
     };
     let version = match cfg.cangjie_version {
         CangjieVersion::V3 => Version::V3,

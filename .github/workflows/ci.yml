@@ -46,13 +46,13 @@ jobs:
       - name: Build package
         # -d: Ubuntu's rust-all is older than our MSRV; the rustup toolchain is used instead.
         run: VENDOR=0 dpkg-buildpackage -us -uc -b -d
-      - run: lintian ../popeinput_*.deb || true
+      - run: lintian ../cosmic-ext-ime_*.deb || true
       - uses: actions/upload-artifact@v4
         with:
-          name: popeinput-deb
-          path: ../popeinput_*.deb
+          name: cosmic-ext-ime-deb
+          path: ../cosmic-ext-ime_*.deb
       - name: Attach to release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: ../popeinput_*.deb
+          files: ../cosmic-ext-ime_*.deb

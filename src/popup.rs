@@ -6,9 +6,9 @@
 use std::fs::File;
 use std::os::fd::AsFd;
 
+use cosmic_ext_ime_engine::{Candidate, PageInfo};
 use cosmic_text::{Attrs, Buffer, Color, Family, FontSystem, Metrics, Shaping, SwashCache, Weight};
 use memmap2::MmapMut;
-use popeinput_engine::{Candidate, PageInfo};
 use wayland_client::protocol::{wl_buffer, wl_compositor, wl_shm, wl_shm_pool, wl_surface};
 use wayland_client::QueueHandle;
 use wayland_protocols::wp::fractional_scale::v1::client::{
@@ -316,7 +316,7 @@ impl Canvas {
     {
         let stride = width * 4;
         let size = (stride * height) as usize;
-        let fd = rustix::fs::memfd_create("popeinput-popup", rustix::fs::MemfdFlags::CLOEXEC)?;
+        let fd = rustix::fs::memfd_create("cosmic-ext-ime-popup", rustix::fs::MemfdFlags::CLOEXEC)?;
         let file = File::from(fd);
         file.set_len(size as u64)?;
         // SAFETY: the file is private to us and sized above; the compositor only reads it.

@@ -1,4 +1,4 @@
-Source: popeinput
+Source: cosmic-ext-ime
 Section: utils
 Priority: optional
 Maintainer: Wan Leung Wong <me@wanleung.com>
@@ -14,10 +14,10 @@ Build-Depends:
     libwayland-dev,
     libxkbcommon-dev,
 Standards-Version: 4.6.2
-Homepage: https://github.com/wanleung/popeinput
+Homepage: https://github.com/wanleung/cosmic-ext-ime
 Rules-Requires-Root: no
 
-Package: popeinput
+Package: cosmic-ext-ime
 Architecture: amd64 arm64
 Depends:
     ${misc:Depends},

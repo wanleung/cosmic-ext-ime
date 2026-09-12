@@ -1,10 +1,10 @@
-.TH POPEINPUT 1 "September 2026" "popeinput 0.1.0" "User Commands"
+.TH COSMIC-EXT-IME 1 "September 2026" "cosmic-ext-ime 0.1.0" "User Commands"
 .SH NAME
-popeinput \- Cangjie, Quick and RIME input method for the COSMIC desktop
+cosmic-ext-ime \- Cangjie, Quick and RIME input method for the COSMIC desktop
 .SH SYNOPSIS
-.B popeinput
+.B cosmic-ext-ime
 .SH DESCRIPTION
-.B popeinput
+.B cosmic-ext-ime
 is a native Wayland input method (zwp_input_method_v2) for COSMIC. It provides
 Cangjie and Quick (倉頡／速成) through libcangjie2, or any RIME schema through
 librime, with a candidate popup that follows the COSMIC theme.
@@ -17,16 +17,16 @@ Chinese input is enabled while a Chinese keyboard layout is active in COSMIC
 Settings > Keyboard > Input Sources; switch with Super+Space.
 .SH CONFIGURATION
 Settings are stored via cosmic-config in
-.I ~/.config/cosmic/io.github.wanleung.popeinput/v1/
+.I ~/.config/cosmic/io.github.wanleung.CosmicExtIme/v1/
 and applied live. Use
-.BR popeinput-settings (1)
+.BR cosmic-ext-ime-settings (1)
 to change them. RIME user data lives in
-.IR ~/.local/share/popeinput/rime/ .
+.IR ~/.local/share/cosmic-ext-ime/rime/ .
 .SH ENVIRONMENT
 .TP
 .B RUST_LOG
 Log level filter, e.g. RUST_LOG=debug.
 .SH SEE ALSO
-.BR popeinput-settings (1)
+.BR cosmic-ext-ime-settings (1)
 .SH AUTHOR
 Wan Leung Wong

@@ -5,7 +5,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use popeinput_engine::{Candidate, InputEngine, Key, KeyInput, PageInfo, Preedit, Response};
+use cosmic_ext_ime_engine::{Candidate, InputEngine, Key, KeyInput, PageInfo, Preedit, Response};
 
 use crate::db::{CangjieDb, CangjieError, Char, Filter, Version};
 

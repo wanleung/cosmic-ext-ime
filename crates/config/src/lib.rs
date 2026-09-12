@@ -9,7 +9,7 @@ use cosmic_config::cosmic_config_derive::CosmicConfigEntry;
 use cosmic_config::{Config, ConfigGet, CosmicConfigEntry};
 use serde::{Deserialize, Serialize};
 
-pub const APP_ID: &str = "io.github.wanleung.popeinput";
+pub const APP_ID: &str = "io.github.wanleung.CosmicExtIme";
 pub const CONFIG_VERSION: u64 = 1;
 pub const STATE_VERSION: u64 = 1;
 
@@ -189,7 +189,7 @@ impl PopeinputConfig {
         let store_empty = ConfigGet::get::<Mode>(config, "mode").is_err();
         if !complete || store_empty {
             if let Err(e) = cfg.write_entry(config) {
-                eprintln!("popeinput: could not write default settings: {e}");
+                eprintln!("cosmic-ext-ime: could not write default settings: {e}");
             }
         }
         cfg

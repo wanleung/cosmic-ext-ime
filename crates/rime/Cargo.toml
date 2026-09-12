@@ -1,12 +1,12 @@
 [package]
-name = "popeinput-rime"
+name = "cosmic-ext-ime-rime"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
-description = "RIME (librime) input engine for popeinput"
+description = "RIME (librime) input engine for cosmic-ext-ime"
 
 [dependencies]
-popeinput-engine = { path = "../engine" }
+cosmic-ext-ime-engine = { path = "../engine" }
 rime-sys = { path = "../rime-sys" }
 log = "0.4"

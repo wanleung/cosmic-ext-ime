@@ -13,20 +13,20 @@ version = "0.1.0"
 edition = "2021"
 rust-version = "1.88"
 license = "GPL-3.0-or-later"
-repository = "https://github.com/wanleung/popeinput"
+repository = "https://github.com/wanleung/cosmic-ext-ime"
 
 [package]
-name = "popeinput"
+name = "cosmic-ext-ime"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 description = "Native Wayland (zwp_input_method_v2) Chinese input method for COSMIC — Cangjie/Quick via libcangjie2"
 
 [dependencies]
-popeinput-engine = { path = "crates/engine" }
-popeinput-cangjie = { path = "crates/cangjie" }
-popeinput-rime = { path = "crates/rime" }
-popeinput-config = { path = "crates/config" }
+cosmic-ext-ime-engine = { path = "crates/engine" }
+cosmic-ext-ime-cangjie = { path = "crates/cangjie" }
+cosmic-ext-ime-rime = { path = "crates/rime" }
+cosmic-ext-ime-config = { path = "crates/config" }
 cosmic-config = { workspace = true, features = ["calloop"] }
 cosmic-theme = { workspace = true }
 calloop = "0.14"

@@ -8,7 +8,7 @@ use calloop::EventLoop;
 use calloop_wayland_source::WaylandSource;
 use cosmic_config::calloop::ConfigWatchSource;
 use cosmic_config::CosmicConfigEntry;
-use popeinput_config::PopeinputConfig;
+use cosmic_ext_ime_config::PopeinputConfig;
 use wayland_client::globals::registry_queue_init;
 use wayland_client::protocol::{wl_compositor::WlCompositor, wl_seat::WlSeat, wl_shm::WlShm};
 use wayland_client::Connection;
@@ -57,7 +57,7 @@ fn main() -> Result<()> {
         engine,
         cfg,
     );
-    log::info!("popeinput started ({})", state.engine_name());
+    log::info!("cosmic-ext-ime started ({})", state.engine_name());
 
     let mut event_loop: EventLoop<'static, State> =
         EventLoop::try_new().context("creating event loop")?;

@@ -1,4 +1,4 @@
-//! Settings window for popeinput. It only reads and writes the shared
+//! Settings window for cosmic-ext-ime. It only reads and writes the shared
 //! cosmic-config keys; the daemon watches them and applies changes live.
 
 use cosmic::app::{Core, Settings, Task};
@@ -6,12 +6,12 @@ use cosmic::cosmic_config::{self, Config};
 use cosmic::iced::{Length, Size};
 use cosmic::widget::{self, settings};
 use cosmic::{executor, Application, Element};
-use popeinput_config::{
+use cosmic_ext_ime_config::{
     CangjieVersion, CharSet, Engine, Mode, PopeinputConfig, RimeState, APP_ID, CONFIG_VERSION,
     STATE_VERSION,
 };
 
-const SETTINGS_APP_ID: &str = "io.github.wanleung.popeinput.Settings";
+const SETTINGS_APP_ID: &str = "io.github.wanleung.CosmicExtIme.Settings";
 
 fn main() -> cosmic::iced::Result {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn")).init();
@@ -115,7 +115,7 @@ impl Application for App {
     }
 
     fn header_start(&self) -> Vec<Element<'_, Message>> {
-        vec![widget::text::title3("popeinput 設定").into()]
+        vec![widget::text::title3("輸入法設定 Input Method Settings").into()]
     }
 
     fn subscription(&self) -> cosmic::iced::Subscription<Message> {
@@ -215,7 +215,7 @@ impl Application for App {
         } else if self.rime.schemas.is_empty() {
             "Schema list appears once the RIME engine has started (a few seconds after selecting it).".to_string()
         } else {
-            "Schemas come from /usr/share/rime-data and ~/.local/share/popeinput/rime; \
+            "Schemas come from /usr/share/rime-data and ~/.local/share/cosmic-ext-ime/rime; \
              edit default.custom.yaml there to add or remove them."
                 .to_string()
         };

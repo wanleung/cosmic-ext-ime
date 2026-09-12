@@ -1,5 +1,5 @@
-use popeinput_engine::{InputEngine, Key, KeyInput, Modifiers, Response};
-use popeinput_rime::{Config, RimeEngine};
+use cosmic_ext_ime_engine::{InputEngine, Key, KeyInput, Modifiers, Response};
+use cosmic_ext_ime_rime::{Config, RimeEngine};
 
 fn key(k: Key) -> KeyInput {
     KeyInput {
@@ -9,7 +9,7 @@ fn key(k: Key) -> KeyInput {
 }
 
 fn config(schema: &str) -> Config {
-    let dir = std::env::temp_dir().join(format!("popeinput-rime-test-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("cosmic-ext-ime-rime-test-{}", std::process::id()));
     Config {
         user_data_dir: dir,
         schema: Some(schema.to_string()),
@@ -52,7 +52,7 @@ fn cangjie5_schema_composes_and_commits() {
     // Escape with nothing composing is not RIME's business.
     assert_eq!(e.process_key(key(Key::Escape)), Response::Ignored);
 
-    assert!(!popeinput_rime::schemas().is_empty());
+    assert!(!cosmic_ext_ime_rime::schemas().is_empty());
     drop(e);
     let _ = std::fs::remove_dir_all(config("cangjie5").user_data_dir);
 }

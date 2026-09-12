@@ -1,13 +1,13 @@
 [package]
-name = "popeinput-settings"
+name = "cosmic-ext-ime-settings"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
-description = "Settings app for popeinput, built with libcosmic"
+description = "Settings app for cosmic-ext-ime, built with libcosmic"
 
 [dependencies]
-popeinput-config = { path = "../crates/config" }
+cosmic-ext-ime-config = { path = "../crates/config" }
 libcosmic = { workspace = true, default-features = false, features = ["winit", "tokio", "wayland", "a11y", "multi-window", "dbus-config"] }
 log = "0.4"
 env_logger = "0.11"

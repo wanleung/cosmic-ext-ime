@@ -1034,6 +1034,70 @@ dependencies = [
 ]
 
 [[package]]
+name = "cosmic-ext-ime"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "calloop",
+ "calloop-wayland-source",
+ "cosmic-config",
+ "cosmic-ext-ime-cangjie",
+ "cosmic-ext-ime-config",
+ "cosmic-ext-ime-engine",
+ "cosmic-ext-ime-rime",
+ "cosmic-text",
+ "cosmic-theme",
+ "env_logger",
+ "log",
+ "memmap2 0.9.11",
+ "rustix 1.1.4",
+ "wayland-client",
+ "wayland-protocols",
+ "wayland-protocols-misc",
+ "xkbcommon 0.9.0",
+]
+
+[[package]]
+name = "cosmic-ext-ime-cangjie"
+version = "0.1.0"
+dependencies = [
+ "cangjie-sys",
+ "cosmic-ext-ime-engine",
+ "log",
+]
+
+[[package]]
+name = "cosmic-ext-ime-config"
+version = "0.1.0"
+dependencies = [
+ "cosmic-config",
+ "serde",
+]
+
+[[package]]
+name = "cosmic-ext-ime-engine"
+version = "0.1.0"
+
+[[package]]
+name = "cosmic-ext-ime-rime"
+version = "0.1.0"
+dependencies = [
+ "cosmic-ext-ime-engine",
+ "log",
+ "rime-sys",
+]
+
+[[package]]
+name = "cosmic-ext-ime-settings"
+version = "0.1.0"
+dependencies = [
+ "cosmic-ext-ime-config",
+ "env_logger",
+ "libcosmic",
+ "log",
+]
+
+[[package]]
 name = "cosmic-freedesktop-icons"
 version = "0.4.0"
 source = "git+https://github.com/pop-os/freedesktop-icons#ab4c57b8e416c6af9297cb04d101889896fd9a92"
@@ -3800,70 +3864,6 @@ name = "pollster"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2f3a9f18d041e6d0e102a0a46750538147e5e8992d3b4873aaafee2520b00ce3"
-
-[[package]]
-name = "popeinput"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "calloop",
- "calloop-wayland-source",
- "cosmic-config",
- "cosmic-text",
- "cosmic-theme",
- "env_logger",
- "log",
- "memmap2 0.9.11",
- "popeinput-cangjie",
- "popeinput-config",
- "popeinput-engine",
- "popeinput-rime",
- "rustix 1.1.4",
- "wayland-client",
- "wayland-protocols",
- "wayland-protocols-misc",
- "xkbcommon 0.9.0",
-]
-
-[[package]]
-name = "popeinput-cangjie"
-version = "0.1.0"
-dependencies = [
- "cangjie-sys",
- "log",
- "popeinput-engine",
-]
-
-[[package]]
-name = "popeinput-config"
-version = "0.1.0"
-dependencies = [
- "cosmic-config",
- "serde",
-]
-
-[[package]]
-name = "popeinput-engine"
-version = "0.1.0"
-
-[[package]]
-name = "popeinput-rime"
-version = "0.1.0"
-dependencies = [
- "log",
- "popeinput-engine",
- "rime-sys",
-]
-
-[[package]]
-name = "popeinput-settings"
-version = "0.1.0"
-dependencies = [
- "env_logger",
- "libcosmic",
- "log",
- "popeinput-config",
-]
 
 [[package]]
 name = "portable-atomic"

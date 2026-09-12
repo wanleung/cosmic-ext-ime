@@ -9,7 +9,7 @@ use std::time::Duration;
 use calloop::timer::{TimeoutAction, Timer};
 use calloop::{LoopHandle, RegistrationToken};
 
-use popeinput_engine::{InputEngine, Key, KeyInput, Response};
+use cosmic_ext_ime_engine::{InputEngine, Key, KeyInput, Response};
 use wayland_client::protocol::wl_keyboard::{KeyState, KeymapFormat};
 use wayland_client::protocol::{
     wl_buffer, wl_compositor, wl_registry, wl_seat, wl_shm, wl_shm_pool, wl_surface,
@@ -34,7 +34,7 @@ use wayland_protocols_misc::zwp_virtual_keyboard_v1::client::{
 };
 use xkbcommon::xkb;
 
-use popeinput_config::PopeinputConfig;
+use cosmic_ext_ime_config::PopeinputConfig;
 
 use crate::config::build_engine;
 use crate::keys;
