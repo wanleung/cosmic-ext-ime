@@ -63,6 +63,7 @@ pub struct Style {
     pub hint: Rgba,
     pub border: Rgba,
     pub highlight: Rgba,
+    pub error: Rgba,
     pub radius: f32,
 }
 
@@ -82,6 +83,7 @@ impl Style {
             hint: foreground.with_alpha(0.6),
             border: c(theme.bg_component_divider()),
             highlight: c(theme.accent_color()),
+            error: c(theme.destructive_color()),
             radius: theme.corner_radii.radius_s[0],
         }
     }
@@ -99,6 +101,8 @@ pub struct Popup<S: 'static> {
     style: Style,
     scale: f32,
     visible: bool,
+    /// Show a "no match" line under the radicals (engine rang the bell).
+    error: bool,
     /// Last shown content, redrawn when the scale or style changes.
     last: Option<(String, Vec<Candidate>, PageInfo, usize)>,
 }
@@ -145,8 +149,13 @@ where
             style,
             scale: 1.0,
             visible: false,
+            error: false,
             last: None,
         }
+    }
+
+    pub fn set_error(&mut self, error: bool) {
+        self.error = error;
     }
 
     pub fn set_style(&mut self, style: Style) {
@@ -195,6 +204,7 @@ where
             return;
         }
         self.last = Some((header.to_string(), candidates.to_vec(), page, selected));
+        let error = self.error;
 
         let scale = self.scale;
         let fg = self.style.foreground.text_color();
@@ -207,6 +217,12 @@ where
             header.to_string(),
             base.clone().color(fg).weight(Weight::BOLD),
         ));
+        if error {
+            spans.push((
+                "\n無此字 no match".to_string(),
+                base.clone().color(self.style.error.text_color()),
+            ));
+        }
         for (i, c) in candidates.iter().enumerate() {
             let color = if i == selected && candidates.len() > 1 {
                 highlight

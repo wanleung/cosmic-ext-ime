@@ -432,6 +432,7 @@ impl State {
         swallowed: bool,
         repeat_input: Option<KeyInput>,
     ) {
+        let bell = response == Response::Bell;
         let (consumed, commit) = match response {
             Response::Ignored => (false, None),
             Response::Consumed | Response::Bell => (true, None),
@@ -439,6 +440,7 @@ impl State {
             Response::CommitAndForward(text) => (false, Some(text)),
         };
         if consumed || commit.is_some() {
+            self.popup.set_error(bell);
             self.sync_to_client(commit.as_deref());
         }
         match key_state {
@@ -457,6 +459,9 @@ impl State {
     /// Push the engine's visible state (and an optional commit) to the text
     /// field, and refresh the candidate popup.
     fn sync_to_client(&mut self, commit: Option<&str>) {
+        if commit.is_some() {
+            self.popup.set_error(false);
+        }
         if let Some(text) = commit {
             log::debug!("commit {text:?}");
             self.input_method.commit_string(text.to_string());
