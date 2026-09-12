@@ -1,0 +1,6 @@
+tar-ignore = target
+tar-ignore = vendor
+tar-ignore = dist
+tar-ignore = .cargo
+tar-ignore = .git
+tar-ignore = .github

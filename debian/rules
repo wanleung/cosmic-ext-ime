@@ -2,12 +2,16 @@
 
 export DESTDIR = debian/cosmic-ext-ime
 export VENDOR ?= 1
+# Ubuntu's versioned toolchain (noble's default rustc is older than our MSRV).
+ifneq (,$(wildcard /usr/lib/rust-1.91/bin/cargo))
+export PATH := /usr/lib/rust-1.91/bin:$(PATH)
+endif
 
 %:
 	dh $@
 
 override_dh_auto_clean:
-	if ! ischroot && test "${VENDOR}" = "1"; then \
+	if ! ischroot && test "${VENDOR}" = "1" && ! test -f vendor.tar; then \
 		just vendor; \
 	fi
 

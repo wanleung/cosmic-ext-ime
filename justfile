@@ -117,3 +117,12 @@ vendor-extract:
 # Build the Debian package (needs debhelper, devscripts, just)
 deb:
     dpkg-buildpackage -us -uc -b
+
+# Signed source package + upload to the Launchpad PPA (asks for your GPG passphrase)
+ppa key='D6C7DB3D7C3E5310' target='ppa:wanleungwong/cosmic-ext-ime':
+    #!/usr/bin/env bash
+    set -euo pipefail
+    test -f vendor.tar || just vendor
+    dpkg-buildpackage -S -sa -d -k{{key}}
+    version=$(dpkg-parsechangelog -S Version)
+    dput {{target}} ../cosmic-ext-ime_${version}_source.changes
