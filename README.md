@@ -121,6 +121,17 @@ the panel's input-source applet shows which is active. With only one layout
 configured, Chinese input is always on. Ctrl+Space and lone-Shift-tap toggles can
 be enabled in the settings app.
 
+## Troubleshooting
+
+- Logs: `journalctl --user -b | grep cosmic-ext-ime` (the daemon is started by
+  the session through systemd; it restarts automatically if it crashes).
+- "input method unavailable" at start-up: another input method (IBus, Fcitx5)
+  holds the seat — stop it and remove its autostart.
+- Typing works in COSMIC apps but not GTK apps: `GTK_IM_MODULE` is still set in
+  the session; see *Application support* above and log in again.
+- RIME schema missing from the list: add it to
+  `~/.local/share/cosmic-ext-ime/rime/default.custom.yaml` and press Redeploy.
+
 ## Development
 
 ```sh

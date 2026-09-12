@@ -15,6 +15,8 @@ applications-dst := base-dir / 'share' / 'applications'
 man-dst := base-dir / 'share' / 'man' / 'man1'
 metainfo-dst := base-dir / 'share' / 'metainfo'
 autostart-dst := absolute_path(clean(rootdir / 'etc' / 'xdg' / 'autostart'))
+unit-dropin := 'app-' + APPID + '@autostart.service.d' / 'restart.conf'
+systemd-user-dst := base-dir / 'lib' / 'systemd' / 'user'
 
 default: build-release
 
@@ -52,6 +54,7 @@ install:
     install -Dm0644 data/man/cosmic-ext-ime.1 {{man-dst}}/cosmic-ext-ime.1
     install -Dm0644 data/man/cosmic-ext-ime-settings.1 {{man-dst}}/cosmic-ext-ime-settings.1
     install -Dm0644 data/{{APPID}}.Settings.metainfo.xml {{metainfo-dst}}/{{APPID}}.Settings.metainfo.xml
+    install -Dm0644 data/systemd/restart.conf {{systemd-user-dst}}/{{unit-dropin}}
 
 uninstall:
     rm -f {{bin-dst}} {{settings-dst}}
@@ -59,6 +62,7 @@ uninstall:
     rm -f {{autostart-dst}}/{{APPID}}.desktop
     rm -f {{man-dst}}/cosmic-ext-ime.1 {{man-dst}}/cosmic-ext-ime-settings.1
     rm -f {{metainfo-dst}}/{{APPID}}.Settings.metainfo.xml
+    rm -rf {{systemd-user-dst}}/{{unit-dropin}}
 
 home := env('HOME')
 user-base := home / '.local'
@@ -70,6 +74,7 @@ install-user: build-release
     install -Dm0644 data/{{APPID}}.desktop {{user-base}}/share/applications/{{APPID}}.desktop
     install -Dm0644 data/{{APPID}}.Settings.desktop {{user-base}}/share/applications/{{APPID}}.Settings.desktop
     install -Dm0644 data/{{APPID}}.desktop {{home}}/.config/autostart/{{APPID}}.desktop
+    install -Dm0644 data/systemd/restart.conf {{home}}/.config/systemd/user/{{unit-dropin}}
     install -Dm0644 data/man/{{name}}.1 {{user-base}}/share/man/man1/{{name}}.1
     install -Dm0644 data/man/{{name}}-settings.1 {{user-base}}/share/man/man1/{{name}}-settings.1
     -update-desktop-database {{user-base}}/share/applications
@@ -78,6 +83,7 @@ uninstall-user:
     rm -f {{user-base}}/bin/{{name}} {{user-base}}/bin/{{name}}-settings
     rm -f {{user-base}}/share/applications/{{APPID}}.desktop {{user-base}}/share/applications/{{APPID}}.Settings.desktop
     rm -f {{home}}/.config/autostart/{{APPID}}.desktop
+    rm -rf {{home}}/.config/systemd/user/{{unit-dropin}}
     rm -f {{user-base}}/share/man/man1/{{name}}.1 {{user-base}}/share/man/man1/{{name}}-settings.1
     -update-desktop-database {{user-base}}/share/applications
 
