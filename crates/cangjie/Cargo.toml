@@ -1,0 +1,11 @@
+[package]
+name = "popeinput-cangjie"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Cangjie / Quick input engine for popeinput, backed by libcangjie2"
+
+[dependencies]
+popeinput-engine = { path = "../engine" }
+cangjie-sys = { path = "../cangjie-sys" }
+log = "0.4"

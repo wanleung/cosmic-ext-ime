@@ -1,0 +1,28 @@
+[workspace]
+resolver = "2"
+members = ["crates/engine", "crates/cangjie-sys", "crates/cangjie"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "GPL-3.0-or-later"
+repository = "https://github.com/wanleung/popeinput"
+
+[package]
+name = "popeinput"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Native Wayland (zwp_input_method_v2) Chinese input method for COSMIC — Cangjie/Quick via libcangjie2"
+
+[dependencies]
+popeinput-engine = { path = "crates/engine" }
+popeinput-cangjie = { path = "crates/cangjie" }
+
+wayland-client = "0.31"
+wayland-protocols-misc = { version = "0.3", features = ["client"] }
+xkbcommon = "0.9"
+
+anyhow = "1"
+log = "0.4"
+env_logger = "0.11"
