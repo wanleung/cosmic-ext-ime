@@ -46,13 +46,17 @@ jobs:
       - name: Build package
         # -d: Ubuntu's rust-all is older than our MSRV; the rustup toolchain is used instead.
         run: VENDOR=0 dpkg-buildpackage -us -uc -b -d
-      - run: lintian ../cosmic-ext-ime_*.deb || true
+      - name: Collect package
+        run: |
+          mkdir -p dist
+          mv ../cosmic-ext-ime_*.deb dist/
+          lintian dist/*.deb || true
       - uses: actions/upload-artifact@v4
         with:
           name: cosmic-ext-ime-deb
-          path: ../cosmic-ext-ime_*.deb
+          path: dist/*.deb
       - name: Attach to release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: ../cosmic-ext-ime_*.deb
+          files: dist/*.deb
