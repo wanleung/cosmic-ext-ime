@@ -1,3 +1,10 @@
+cosmic-ext-ime (0.1.1) noble; urgency=medium
+
+  * Build with rustc 1.91 so the package builds on Launchpad (noble).
+  * Add AppStream metainfo; slimmer vendored sources.
+
+ -- Wan Leung Wong <me@wanleung.com>  Sat, 12 Sep 2026 19:50:46 +0100
+
 cosmic-ext-ime (0.1.0) noble; urgency=medium
 
   * Initial release: Cangjie/Quick via libcangjie2, RIME via librime,

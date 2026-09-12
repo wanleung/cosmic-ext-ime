@@ -3,13 +3,15 @@ resolver = "2"
 members = ["crates/engine", "crates/cangjie-sys", "crates/cangjie", "crates/rime-sys", "crates/rime", "crates/config", "settings"]
 
 [workspace.dependencies]
-# Pinned to the libcosmic revision cosmic-settings 1.7.0 (Pop!_OS 24.04) is built from.
-cosmic-config = { git = "https://github.com/pop-os/libcosmic", rev = "2a73fbc0edfe1525381bf999e241d73def79b222", default-features = false, features = ["macro"] }
-libcosmic = { git = "https://github.com/pop-os/libcosmic", rev = "2a73fbc0edfe1525381bf999e241d73def79b222", default-features = false }
-cosmic-theme = { git = "https://github.com/pop-os/libcosmic", rev = "2a73fbc0edfe1525381bf999e241d73def79b222", default-features = false }
+# Newest libcosmic revision that still builds with rustc 1.91, the latest toolchain
+# available on Launchpad for noble (Pop!_OS itself uses rust-all 1.95). Bump when
+# Launchpad gains a newer rustc-1.xx.
+cosmic-config = { git = "https://github.com/pop-os/libcosmic", rev = "dc84488cd873", default-features = false, features = ["macro"] }
+libcosmic = { git = "https://github.com/pop-os/libcosmic", rev = "dc84488cd873", default-features = false }
+cosmic-theme = { git = "https://github.com/pop-os/libcosmic", rev = "dc84488cd873", default-features = false }
 
 [workspace.package]
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 rust-version = "1.88"
 license = "GPL-3.0-or-later"
