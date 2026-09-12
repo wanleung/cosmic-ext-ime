@@ -11,6 +11,11 @@ use wayland_client::protocol::{
     wl_buffer, wl_compositor, wl_registry, wl_seat, wl_shm, wl_shm_pool, wl_surface,
 };
 use wayland_client::{delegate_noop, Connection, Dispatch, QueueHandle, WEnum};
+use wayland_protocols::wp::fractional_scale::v1::client::{
+    wp_fractional_scale_manager_v1::WpFractionalScaleManagerV1,
+    wp_fractional_scale_v1::{self, WpFractionalScaleV1},
+};
+use wayland_protocols::wp::viewporter::client::{wp_viewport::WpViewport, wp_viewporter::WpViewporter};
 use wayland_protocols_misc::zwp_input_method_v2::client::{
     zwp_input_method_keyboard_grab_v2::{self, ZwpInputMethodKeyboardGrabV2},
     zwp_input_method_manager_v2::ZwpInputMethodManagerV2,
@@ -27,7 +32,7 @@ use popeinput_config::PopeinputConfig;
 
 use crate::config::build_engine;
 use crate::keys;
-use crate::popup::Popup;
+use crate::popup::{Popup, Style};
 
 pub struct State {
     qh: QueueHandle<Self>,
@@ -71,6 +76,8 @@ impl State {
         seat: &wl_seat::WlSeat,
         compositor: &wl_compositor::WlCompositor,
         shm: &wl_shm::WlShm,
+        fractional_scale: Option<&WpFractionalScaleManagerV1>,
+        viewporter: Option<&WpViewporter>,
         im_manager: &ZwpInputMethodManagerV2,
         vk_manager: &ZwpVirtualKeyboardManagerV1,
         engine: Box<dyn InputEngine>,
@@ -78,7 +85,15 @@ impl State {
     ) -> Self {
         let input_method = im_manager.get_input_method(seat, qh, ());
         let virtual_keyboard = vk_manager.create_virtual_keyboard(seat, qh, ());
-        let popup = Popup::new(qh, compositor, shm, &input_method, cfg.popup_font_size as f32);
+        let popup = Popup::new(
+            qh,
+            compositor,
+            shm,
+            fractional_scale,
+            viewporter,
+            &input_method,
+            Style::from_cosmic(cfg.popup_font_size as f32),
+        );
         State {
             qh: qh.clone(),
             cfg,
@@ -127,7 +142,9 @@ impl State {
                 Err(e) => log::error!("keeping previous engine: {e:#}"),
             }
         }
-        self.popup.set_font_size(cfg.popup_font_size as f32);
+        if cfg.popup_font_size != self.cfg.popup_font_size {
+            self.popup.set_style(Style::from_cosmic(cfg.popup_font_size as f32));
+        }
         self.cfg = cfg;
         self.follow_layout = self.cfg.follow_layout
             && self.keymap.as_ref().is_some_and(|k| k.num_layouts() > 1);
@@ -136,6 +153,11 @@ impl State {
         } else {
             self.set_enabled(true);
         }
+    }
+
+    /// The COSMIC theme changed on disk.
+    pub fn reload_theme(&mut self) {
+        self.popup.set_style(Style::from_cosmic(self.cfg.popup_font_size as f32));
     }
 
     fn set_enabled(&mut self, enabled: bool) {
@@ -243,32 +265,32 @@ impl State {
         self.last_key_time = time;
         let keycode = xkb::Keycode::new(key + 8);
 
-        if key_state == KeyState::Released {
-            let was_shift = self
-                .xkb_state
-                .as_ref()
-                .is_some_and(|s| keys::is_shift(keys::keysym(s, keycode)));
-            if was_shift && self.shift_tap_pending {
-                self.shift_tap_pending = false;
-                self.forward_key(time, key, key_state);
-                self.toggle_enabled();
-                return;
-            }
-            if self.consumed_keys.remove(&key) {
-                return;
-            }
-            self.forward_key(time, key, key_state);
-            return;
-        }
-
         let Some(xkb_state) = self.xkb_state.as_ref() else {
             self.forward_key(time, key, key_state);
             return;
         };
         let input = keys::translate(xkb_state, keycode);
-        log::trace!("key {key} -> {input:?}");
-
         let is_shift = keys::is_shift(keys::keysym(xkb_state, keycode));
+        let is_modifier = matches!(input.key, Key::Modifier(_));
+
+        if key_state == KeyState::Released {
+            if is_shift && self.shift_tap_pending {
+                self.shift_tap_pending = false;
+                self.forward_key(time, key, key_state);
+                self.toggle_enabled();
+                return;
+            }
+            let swallowed = self.consumed_keys.remove(&key);
+            if self.enabled {
+                let response = self.engine.release_key(input);
+                self.apply_response(response, time, key, key_state, swallowed);
+            } else if !swallowed {
+                self.forward_key(time, key, key_state);
+            }
+            return;
+        }
+
+        log::trace!("key {key} -> {input:?}");
         self.shift_tap_pending = self.cfg.shift_tap_toggle
             && is_shift
             && !input.modifiers.ctrl
@@ -281,25 +303,48 @@ impl State {
             return;
         }
 
-        if !self.enabled || input.key == Key::Modifier {
+        if !self.enabled {
             self.forward_key(time, key, key_state);
             return;
         }
 
-        match self.engine.process_key(input) {
-            Response::Ignored => self.forward_key(time, key, key_state),
-            Response::Consumed | Response::Bell => {
+        let response = self.engine.process_key(input);
+        // Modifier keys always reach the application, whatever the engine
+        // did with them, so its modifier state matches ours.
+        if is_modifier {
+            if response != Response::Ignored {
+                let commit = match &response {
+                    Response::Commit(t) | Response::CommitAndForward(t) => Some(t.clone()),
+                    _ => None,
+                };
+                self.sync_to_client(commit.as_deref());
+            }
+            self.forward_key(time, key, key_state);
+            return;
+        }
+        self.apply_response(response, time, key, key_state, false);
+    }
+
+    /// Act on an engine response for `key`. Presses the engine consumed are
+    /// swallowed (and so is their release later); releases are forwarded
+    /// whenever their press was, whatever the engine did with them.
+    fn apply_response(&mut self, response: Response, time: u32, key: u32, key_state: KeyState, swallowed: bool) {
+        let (consumed, commit) = match response {
+            Response::Ignored => (false, None),
+            Response::Consumed | Response::Bell => (true, None),
+            Response::Commit(text) => (true, Some(text)),
+            Response::CommitAndForward(text) => (false, Some(text)),
+        };
+        if consumed || commit.is_some() {
+            self.sync_to_client(commit.as_deref());
+        }
+        match key_state {
+            KeyState::Pressed if consumed => {
                 self.consumed_keys.insert(key);
-                self.sync_to_client(None);
             }
-            Response::Commit(text) => {
-                self.consumed_keys.insert(key);
-                self.sync_to_client(Some(&text));
-            }
-            Response::CommitAndForward(text) => {
-                self.sync_to_client(Some(&text));
-                self.forward_key(time, key, key_state);
-            }
+            KeyState::Pressed => self.forward_key(time, key, key_state),
+            _ if swallowed => {}
+            _ => self.forward_key(time, key, key_state),
         }
     }
 
@@ -319,7 +364,8 @@ impl State {
         if preedit.text.is_empty() && candidates.is_empty() {
             self.popup.hide();
         } else {
-            self.popup.show(&preedit.text, &candidates, self.engine.page_info());
+            let (page, selected) = (self.engine.page_info(), self.engine.selected());
+            self.popup.show(&preedit.text, &candidates, page, selected);
         }
     }
 
@@ -419,6 +465,37 @@ impl Dispatch<ZwpInputPopupSurfaceV2, ()> for State {
     }
 }
 
+impl Dispatch<WpFractionalScaleV1, ()> for State {
+    fn event(
+        state: &mut Self,
+        _: &WpFractionalScaleV1,
+        event: wp_fractional_scale_v1::Event,
+        _: &(),
+        _: &Connection,
+        _: &QueueHandle<Self>,
+    ) {
+        if let wp_fractional_scale_v1::Event::PreferredScale { scale } = event {
+            state.popup.set_scale(scale as f32 / 120.0);
+        }
+    }
+}
+
+impl Dispatch<wl_surface::WlSurface, ()> for State {
+    fn event(
+        state: &mut Self,
+        _: &wl_surface::WlSurface,
+        event: wl_surface::Event,
+        _: &(),
+        _: &Connection,
+        _: &QueueHandle<Self>,
+    ) {
+        // Integer fallback for compositors without wp_fractional_scale_v1.
+        if let wl_surface::Event::PreferredBufferScale { factor } = event {
+            state.popup.set_scale(factor as f32);
+        }
+    }
+}
+
 impl Dispatch<wl_buffer::WlBuffer, ()> for State {
     fn event(
         _: &mut Self,
@@ -461,7 +538,9 @@ impl Dispatch<wl_seat::WlSeat, ()> for State {
 delegate_noop!(State: ignore wl_compositor::WlCompositor);
 delegate_noop!(State: ignore wl_shm::WlShm);
 delegate_noop!(State: ignore wl_shm_pool::WlShmPool);
-delegate_noop!(State: ignore wl_surface::WlSurface);
+delegate_noop!(State: ignore WpFractionalScaleManagerV1);
+delegate_noop!(State: ignore WpViewporter);
+delegate_noop!(State: ignore WpViewport);
 delegate_noop!(State: ignore ZwpInputMethodManagerV2);
 delegate_noop!(State: ignore ZwpVirtualKeyboardManagerV1);
 delegate_noop!(State: ignore ZwpVirtualKeyboardV1);

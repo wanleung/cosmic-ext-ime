@@ -8,7 +8,7 @@ use std::os::raw::c_int;
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, OnceLock};
 
-use popeinput_engine::{Candidate, InputEngine, Key, KeyInput, PageInfo, Preedit, Response};
+use popeinput_engine::{Candidate, InputEngine, Key, KeyInput, ModifierKey, PageInfo, Preedit, Response};
 use rime_sys as sys;
 
 macro_rules! api {
@@ -279,6 +279,23 @@ impl RimeEngine {
         self.snapshot = snap;
     }
 
+    fn send_key(&mut self, input: KeyInput, extra_mask: c_int) -> Response {
+        let (sym, mask) = to_rime_key(&input);
+        if sym == 0 {
+            return Response::Ignored;
+        }
+        // SAFETY: valid session.
+        let handled = unsafe { api!(self.lib.api, process_key)(self.session, sym, mask | extra_mask) } != 0;
+        let commit = self.take_commit();
+        self.refresh();
+        match (handled, commit) {
+            (true, Some(text)) => Response::Commit(text),
+            (true, None) => Response::Consumed,
+            (false, Some(text)) => Response::CommitAndForward(text),
+            (false, None) => Response::Ignored,
+        }
+    }
+
     fn take_commit(&mut self) -> Option<String> {
         // SAFETY: zeroed + sized struct, freed after reading.
         unsafe {
@@ -307,6 +324,7 @@ const SHIFT_MASK: c_int = 1 << 0;
 const CONTROL_MASK: c_int = 1 << 2;
 const ALT_MASK: c_int = 1 << 3;
 const SUPER_MASK: c_int = 1 << 6;
+const RELEASE_MASK: c_int = 1 << 30;
 
 /// X11 keysym and modifier mask as librime expects them.
 fn to_rime_key(input: &KeyInput) -> (c_int, c_int) {
@@ -324,7 +342,18 @@ fn to_rime_key(input: &KeyInput) -> (c_int, c_int) {
         Key::Down => 0xff54,
         Key::PageUp => 0xff55,
         Key::PageDown => 0xff56,
-        Key::Modifier | Key::Other => 0,
+        Key::Modifier(m) => match m {
+            ModifierKey::ShiftL => 0xffe1,
+            ModifierKey::ShiftR => 0xffe2,
+            ModifierKey::ControlL => 0xffe3,
+            ModifierKey::ControlR => 0xffe4,
+            ModifierKey::AltL => 0xffe9,
+            ModifierKey::AltR => 0xffea,
+            ModifierKey::SuperL => 0xffeb,
+            ModifierKey::SuperR => 0xffec,
+            ModifierKey::Other => 0,
+        },
+        Key::Other => 0,
     };
     let m = input.modifiers;
     let mut mask = 0;
@@ -353,20 +382,11 @@ impl InputEngine for RimeEngine {
     }
 
     fn process_key(&mut self, input: KeyInput) -> Response {
-        let (sym, mask) = to_rime_key(&input);
-        if sym == 0 {
-            return Response::Ignored;
-        }
-        // SAFETY: valid session.
-        let handled = unsafe { api!(self.lib.api, process_key)(self.session, sym, mask) } != 0;
-        let commit = self.take_commit();
-        self.refresh();
-        match (handled, commit) {
-            (true, Some(text)) => Response::Commit(text),
-            (true, None) => Response::Consumed,
-            (false, Some(text)) => Response::CommitAndForward(text),
-            (false, None) => Response::Ignored,
-        }
+        self.send_key(input, 0)
+    }
+
+    fn release_key(&mut self, input: KeyInput) -> Response {
+        self.send_key(input, RELEASE_MASK)
     }
 
     fn preedit(&self) -> Preedit {

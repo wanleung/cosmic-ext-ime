@@ -34,7 +34,20 @@ pub enum Key {
     PageUp,
     PageDown,
     /// Shift, Ctrl, Alt, Super and friends.
-    Modifier,
+    Modifier(ModifierKey),
+    Other,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ModifierKey {
+    ShiftL,
+    ShiftR,
+    ControlL,
+    ControlR,
+    AltL,
+    AltR,
+    SuperL,
+    SuperR,
     Other,
 }
 
@@ -86,6 +99,11 @@ pub trait InputEngine {
     fn name(&self) -> &str;
 
     fn process_key(&mut self, input: KeyInput) -> Response;
+
+    /// Key release; most engines ignore these, RIME uses them for toggles.
+    fn release_key(&mut self, _input: KeyInput) -> Response {
+        Response::Ignored
+    }
 
     fn preedit(&self) -> Preedit;
 

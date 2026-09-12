@@ -6,6 +6,7 @@ members = ["crates/engine", "crates/cangjie-sys", "crates/cangjie", "crates/rime
 # Pinned to the libcosmic revision cosmic-settings 1.7.0 (Pop!_OS 24.04) is built from.
 cosmic-config = { git = "https://github.com/pop-os/libcosmic", rev = "2a73fbc0edfe1525381bf999e241d73def79b222", default-features = false, features = ["macro"] }
 libcosmic = { git = "https://github.com/pop-os/libcosmic", rev = "2a73fbc0edfe1525381bf999e241d73def79b222", default-features = false }
+cosmic-theme = { git = "https://github.com/pop-os/libcosmic", rev = "2a73fbc0edfe1525381bf999e241d73def79b222", default-features = false }
 
 [workspace.package]
 version = "0.1.0"
@@ -26,10 +27,12 @@ popeinput-cangjie = { path = "crates/cangjie" }
 popeinput-rime = { path = "crates/rime" }
 popeinput-config = { path = "crates/config" }
 cosmic-config = { workspace = true, features = ["calloop"] }
+cosmic-theme = { workspace = true }
 calloop = "0.14"
 calloop-wayland-source = "0.4"
 
 wayland-client = "0.31"
+wayland-protocols = { version = "0.32", features = ["client", "staging"] }
 wayland-protocols-misc = { version = "0.3", features = ["client"] }
 xkbcommon = "0.9"
 cosmic-text = "0.19"

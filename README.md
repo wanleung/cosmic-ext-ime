@@ -103,8 +103,7 @@ installed `cosmic-settings` is built from; bump it in `Cargo.toml` when COSMIC u
 - [x] Candidate popup via `zwp_input_popup_surface_v2` (cosmic-text + wl_shm)
 - [x] Settings app (libcosmic) with live reload via cosmic-config
 - [x] Autostart via XDG autostart entry
-- [ ] HiDPI / fractional scaling for the popup; follow the COSMIC theme
+- [x] HiDPI / fractional scaling for the popup; follows the COSMIC theme
 - [x] librime engine
-- [ ] Pass key releases to RIME (needed for its Shift-toggles-ASCII option)
 - [ ] Integration in COSMIC Settings → Keyboard (upstream)
 - [ ] Debian packaging for Pop!_OS

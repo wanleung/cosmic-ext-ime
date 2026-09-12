@@ -1,4 +1,4 @@
-use popeinput_engine::{Key, KeyInput, Modifiers};
+use popeinput_engine::{Key, KeyInput, ModifierKey, Modifiers};
 use xkbcommon::xkb;
 
 pub fn keysym(state: &xkb::State, keycode: xkb::Keycode) -> xkb::Keysym {
@@ -30,7 +30,15 @@ pub fn translate(state: &xkb::State, keycode: xkb::Keycode) -> KeyInput {
         xkb::Keysym::Right => Key::Right,
         xkb::Keysym::Page_Up => Key::PageUp,
         xkb::Keysym::Page_Down => Key::PageDown,
-        s if s.is_modifier_key() => Key::Modifier,
+        xkb::Keysym::Shift_L => Key::Modifier(ModifierKey::ShiftL),
+        xkb::Keysym::Shift_R => Key::Modifier(ModifierKey::ShiftR),
+        xkb::Keysym::Control_L => Key::Modifier(ModifierKey::ControlL),
+        xkb::Keysym::Control_R => Key::Modifier(ModifierKey::ControlR),
+        xkb::Keysym::Alt_L => Key::Modifier(ModifierKey::AltL),
+        xkb::Keysym::Alt_R => Key::Modifier(ModifierKey::AltR),
+        xkb::Keysym::Super_L => Key::Modifier(ModifierKey::SuperL),
+        xkb::Keysym::Super_R => Key::Modifier(ModifierKey::SuperR),
+        s if s.is_modifier_key() => Key::Modifier(ModifierKey::Other),
         _ => {
             let utf8 = state.key_get_utf8(keycode);
             let mut chars = utf8.chars();
