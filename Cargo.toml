@@ -22,6 +22,13 @@ popeinput-cangjie = { path = "crates/cangjie" }
 wayland-client = "0.31"
 wayland-protocols-misc = { version = "0.3", features = ["client"] }
 xkbcommon = "0.9"
+cosmic-text = "0.19"
+memmap2 = "0.9"
+rustix = { version = "1", features = ["fs"] }
+
+serde = { version = "1", features = ["derive"] }
+toml = "0.9"
+dirs = "6"
 
 anyhow = "1"
 log = "0.4"

@@ -1,17 +1,21 @@
 //! zwp_input_method_v2 client: owns the keyboard grab, the virtual keyboard
-//! used to forward keys the engine does not want, and the engine itself.
+//! used to forward keys the engine does not want, the candidate popup, and
+//! the engine itself.
 
 use std::collections::HashSet;
 use std::os::fd::{AsFd, OwnedFd};
 
 use popeinput_engine::{InputEngine, Key, Response};
 use wayland_client::protocol::wl_keyboard::{KeyState, KeymapFormat};
-use wayland_client::protocol::{wl_registry, wl_seat};
+use wayland_client::protocol::{
+    wl_buffer, wl_compositor, wl_registry, wl_seat, wl_shm, wl_shm_pool, wl_surface,
+};
 use wayland_client::{delegate_noop, Connection, Dispatch, QueueHandle, WEnum};
 use wayland_protocols_misc::zwp_input_method_v2::client::{
     zwp_input_method_keyboard_grab_v2::{self, ZwpInputMethodKeyboardGrabV2},
     zwp_input_method_manager_v2::ZwpInputMethodManagerV2,
     zwp_input_method_v2::{self, ZwpInputMethodV2},
+    zwp_input_popup_surface_v2::{self, ZwpInputPopupSurfaceV2},
 };
 use wayland_protocols_misc::zwp_virtual_keyboard_v1::client::{
     zwp_virtual_keyboard_manager_v1::ZwpVirtualKeyboardManagerV1,
@@ -19,21 +23,28 @@ use wayland_protocols_misc::zwp_virtual_keyboard_v1::client::{
 };
 use xkbcommon::xkb;
 
+use crate::config::Config;
 use crate::keys;
+use crate::popup::{Popup, Style};
 
 pub struct State {
     qh: QueueHandle<Self>,
+    cfg: Config,
     input_method: ZwpInputMethodV2,
     /// Held only while a text field is active; the compositor drops the grab
     /// on deactivate, so it is re-requested on every activate.
     grab: Option<ZwpInputMethodKeyboardGrabV2>,
     virtual_keyboard: ZwpVirtualKeyboardV1,
+    popup: Popup<Self>,
     engine: Box<dyn InputEngine>,
 
     xkb_context: xkb::Context,
+    keymap: Option<xkb::Keymap>,
     xkb_state: Option<xkb::State>,
     /// Keymap fd handed to the virtual keyboard; kept alive for its lifetime.
     keymap_fd: Option<OwnedFd>,
+    /// Chinese input follows the active xkb layout (needs >1 layout configured).
+    follow_layout: bool,
 
     /// Number of `done` events received; the serial expected by `commit`.
     done_serial: u32,
@@ -52,24 +63,33 @@ pub struct State {
 }
 
 impl State {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         qh: &QueueHandle<Self>,
         seat: &wl_seat::WlSeat,
+        compositor: &wl_compositor::WlCompositor,
+        shm: &wl_shm::WlShm,
         im_manager: &ZwpInputMethodManagerV2,
         vk_manager: &ZwpVirtualKeyboardManagerV1,
         engine: Box<dyn InputEngine>,
+        cfg: Config,
     ) -> Self {
         let input_method = im_manager.get_input_method(seat, qh, ());
         let virtual_keyboard = vk_manager.create_virtual_keyboard(seat, qh, ());
+        let popup = Popup::new(qh, compositor, shm, &input_method, Style::from_config(&cfg.popup));
         State {
             qh: qh.clone(),
+            cfg,
             input_method,
             grab: None,
             virtual_keyboard,
+            popup,
             engine,
             xkb_context: xkb::Context::new(xkb::CONTEXT_NO_FLAGS),
+            keymap: None,
             xkb_state: None,
             keymap_fd: None,
+            follow_layout: false,
             done_serial: 0,
             pending_activate: false,
             pending_deactivate: false,
@@ -82,21 +102,41 @@ impl State {
         }
     }
 
-    fn toggle_enabled(&mut self) {
-        self.enabled = !self.enabled;
-        log::info!("{} input {}", self.engine.name(), if self.enabled { "on" } else { "off" });
-        if !self.enabled && self.engine.is_composing() {
-            self.engine.reset();
-            self.sync_to_client(None);
-        }
-    }
-
     pub fn engine_name(&self) -> &str {
         self.engine.name()
     }
 
     pub fn should_exit(&self) -> bool {
         self.exit
+    }
+
+    fn set_enabled(&mut self, enabled: bool) {
+        if self.enabled == enabled {
+            return;
+        }
+        self.enabled = enabled;
+        log::info!("{} input {}", self.engine.name(), if enabled { "on" } else { "off" });
+        if !enabled && self.engine.is_composing() {
+            self.engine.reset();
+            self.sync_to_client(None);
+        }
+    }
+
+    fn toggle_enabled(&mut self) {
+        self.set_enabled(!self.enabled);
+    }
+
+    /// Re-evaluate `enabled` from the active layout name when following layouts.
+    fn apply_layout(&mut self) {
+        if !self.follow_layout {
+            return;
+        }
+        let (Some(keymap), Some(state)) = (&self.keymap, &self.xkb_state) else { return };
+        let group = state.serialize_layout(xkb::STATE_LAYOUT_EFFECTIVE);
+        let name = keymap.layout_get_name(group).to_string();
+        let chinese = self.cfg.is_chinese_layout(&name);
+        log::debug!("layout {group}: {name:?} -> chinese={chinese}");
+        self.set_enabled(chinese);
     }
 
     fn handle_keymap(&mut self, format: WEnum<KeymapFormat>, fd: OwnedFd, size: u32) {
@@ -127,11 +167,22 @@ impl State {
         };
         match keymap {
             Ok(Some(keymap)) => {
+                let layouts: Vec<String> = (0..keymap.num_layouts())
+                    .map(|i| keymap.layout_get_name(i).to_string())
+                    .collect();
+                log::debug!("keymap loaded ({size} bytes), layouts {layouts:?}");
+                self.follow_layout = self.cfg.toggle.follow_layout && layouts.len() > 1;
+                if self.cfg.toggle.follow_layout && layouts.len() == 1 {
+                    log::info!(
+                        "only one keyboard layout configured; add a Chinese input source in \
+                         COSMIC Settings > Keyboard to switch with Super+Space"
+                    );
+                }
                 self.xkb_state = Some(xkb::State::new(&keymap));
-                self.virtual_keyboard
-                    .keymap(format as u32, vk_fd.as_fd(), size);
+                self.keymap = Some(keymap);
+                self.virtual_keyboard.keymap(format as u32, vk_fd.as_fd(), size);
                 self.keymap_fd = Some(vk_fd);
-                log::debug!("keymap loaded ({size} bytes)");
+                self.apply_layout();
             }
             Ok(None) => log::error!("failed to compile keymap"),
             Err(e) => log::error!("failed to read keymap: {e}"),
@@ -190,9 +241,13 @@ impl State {
         log::trace!("key {key} -> {input:?}");
 
         let is_shift = keys::is_shift(keys::keysym(xkb_state, keycode));
-        self.shift_tap_pending = is_shift && !input.modifiers.ctrl && !input.modifiers.alt && !input.modifiers.logo;
+        self.shift_tap_pending = self.cfg.toggle.shift_tap
+            && is_shift
+            && !input.modifiers.ctrl
+            && !input.modifiers.alt
+            && !input.modifiers.logo;
 
-        if input.key == Key::Space && input.modifiers.ctrl {
+        if self.cfg.toggle.ctrl_space && input.key == Key::Space && input.modifiers.ctrl {
             self.consumed_keys.insert(key);
             self.toggle_enabled();
             return;
@@ -220,30 +275,24 @@ impl State {
         }
     }
 
-    /// Push the engine's visible state (and an optional commit) to the text field.
+    /// Push the engine's visible state (and an optional commit) to the text
+    /// field, and refresh the candidate popup.
     fn sync_to_client(&mut self, commit: Option<&str>) {
         if let Some(text) = commit {
             log::debug!("commit {text:?}");
             self.input_method.commit_string(text.to_string());
         }
         let preedit = self.engine.preedit();
-        let candidates = self.engine.candidates();
-        let mut shown = preedit.text.clone();
-        if !candidates.is_empty() {
-            let info = self.engine.page_info();
-            let selected = self.engine.selected();
-            shown.push(' ');
-            for (i, c) in candidates.iter().enumerate() {
-                let mark = if i == selected { "▸" } else { "" };
-                shown.push_str(&format!("{mark}{}{} ", i + 1, c.text));
-            }
-            if info.total_pages > 1 {
-                shown.push_str(&format!("({}/{})", info.page + 1, info.total_pages));
-            }
-        }
         let cursor = preedit.cursor as i32;
-        self.input_method.set_preedit_string(shown, cursor, cursor);
+        self.input_method.set_preedit_string(preedit.text.clone(), cursor, cursor);
         self.input_method.commit(self.done_serial);
+
+        let candidates = self.engine.candidates();
+        if preedit.text.is_empty() && candidates.is_empty() {
+            self.popup.hide();
+        } else {
+            self.popup.show(&preedit.text, &candidates, self.engine.page_info());
+        }
     }
 
     fn handle_done(&mut self) {
@@ -255,6 +304,7 @@ impl State {
             self.release_forwarded_keys();
             self.engine.reset();
             self.consumed_keys.clear();
+            self.popup.hide();
         }
         if self.pending_activate {
             self.pending_activate = false;
@@ -263,6 +313,7 @@ impl State {
             self.grab = Some(self.input_method.grab_keyboard(&self.qh, ()));
             self.engine.reset();
             self.consumed_keys.clear();
+            self.popup.hide();
         }
     }
 
@@ -317,9 +368,40 @@ impl Dispatch<ZwpInputMethodKeyboardGrabV2, ()> for State {
                 state
                     .virtual_keyboard
                     .modifiers(mods_depressed, mods_latched, mods_locked, group);
+                state.apply_layout();
             }
             Event::RepeatInfo { .. } => {}
             _ => {}
+        }
+    }
+}
+
+impl Dispatch<ZwpInputPopupSurfaceV2, ()> for State {
+    fn event(
+        _: &mut Self,
+        _: &ZwpInputPopupSurfaceV2,
+        event: zwp_input_popup_surface_v2::Event,
+        _: &(),
+        _: &Connection,
+        _: &QueueHandle<Self>,
+    ) {
+        if let zwp_input_popup_surface_v2::Event::TextInputRectangle { x, y, width, height } = event {
+            log::trace!("text input rectangle {x},{y} {width}x{height}");
+        }
+    }
+}
+
+impl Dispatch<wl_buffer::WlBuffer, ()> for State {
+    fn event(
+        _: &mut Self,
+        buffer: &wl_buffer::WlBuffer,
+        event: wl_buffer::Event,
+        _: &(),
+        _: &Connection,
+        _: &QueueHandle<Self>,
+    ) {
+        if let wl_buffer::Event::Release = event {
+            buffer.destroy();
         }
     }
 }
@@ -348,12 +430,17 @@ impl Dispatch<wl_seat::WlSeat, ()> for State {
     }
 }
 
+delegate_noop!(State: ignore wl_compositor::WlCompositor);
+delegate_noop!(State: ignore wl_shm::WlShm);
+delegate_noop!(State: ignore wl_shm_pool::WlShmPool);
+delegate_noop!(State: ignore wl_surface::WlSurface);
 delegate_noop!(State: ignore ZwpInputMethodManagerV2);
 delegate_noop!(State: ignore ZwpVirtualKeyboardManagerV1);
 delegate_noop!(State: ignore ZwpVirtualKeyboardV1);
 
 impl Drop for State {
     fn drop(&mut self) {
+        self.popup.hide();
         self.drop_grab();
         self.release_forwarded_keys();
         self.virtual_keyboard.destroy();
