@@ -204,6 +204,24 @@ pub fn schemas() -> Vec<Schema> {
     SCHEMAS.lock().unwrap().clone()
 }
 
+/// Rebuild all schemas from the yaml sources (after the user edited
+/// `*.custom.yaml`). Existing sessions keep old data; recreate engines after.
+pub fn redeploy() -> Result<(), String> {
+    let Some(lib) = LIBRARY.get().and_then(|r| r.as_ref().ok()) else {
+        // Not initialised yet: the first engine created will deploy anyway.
+        return Ok(());
+    };
+    log::info!("redeploying RIME schemas");
+    // SAFETY: library is initialised; full maintenance is a supported call.
+    unsafe {
+        if api!(lib.api, start_maintenance)(1) != 0 {
+            api!(lib.api, join_maintenance_thread)();
+        }
+    }
+    *SCHEMAS.lock().unwrap() = list_schemas(lib);
+    Ok(())
+}
+
 fn cstr(p: *const std::os::raw::c_char) -> String {
     if p.is_null() {
         String::new()

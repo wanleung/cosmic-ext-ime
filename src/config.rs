@@ -32,6 +32,11 @@ fn build_rime(cfg: &PopeinputConfig) -> Result<Box<dyn InputEngine>> {
 }
 
 fn publish_rime_state(error: Option<&anyhow::Error>) {
+    let Ok(handler) = RimeState::handler() else {
+        log::warn!("no state store for RIME schemas");
+        return;
+    };
+    let previous = RimeState::load(&handler);
     let state = RimeState {
         schemas: cosmic_ext_ime_rime::schemas()
             .into_iter()
@@ -41,15 +46,21 @@ fn publish_rime_state(error: Option<&anyhow::Error>) {
             })
             .collect(),
         error: error.map(|e| format!("{e:#}")).unwrap_or_default(),
+        deploy_requested: previous.deploy_requested,
+        deploy_done: previous.deploy_requested,
     };
-    match RimeState::handler() {
-        Ok(h) => {
-            if let Err(e) = state.write_entry(&h) {
-                log::warn!("could not publish RIME state: {e}");
-            }
-        }
-        Err(e) => log::warn!("no state store for RIME schemas: {e}"),
+    if let Err(e) = state.write_entry(&handler) {
+        log::warn!("could not publish RIME state: {e}");
     }
+}
+
+/// True when the settings app asked for a RIME redeploy we have not served.
+pub fn rime_deploy_pending(state: &RimeState) -> bool {
+    state.deploy_requested > state.deploy_done
+}
+
+pub fn redeploy_rime() -> Result<()> {
+    cosmic_ext_ime_rime::redeploy().map_err(|e| anyhow::anyhow!(e))
 }
 
 fn build_cangjie(cfg: &PopeinputConfig) -> Result<Box<dyn InputEngine>> {

@@ -213,6 +213,28 @@ impl State {
         }
     }
 
+    /// The settings app asked for a RIME redeploy: rebuild schemas, then
+    /// recreate the engine so it uses the fresh data.
+    pub fn redeploy_rime(&mut self) {
+        if let Err(e) = crate::config::redeploy_rime() {
+            log::warn!("RIME redeploy: {e:#}");
+        }
+        let cfg = PopeinputConfig {
+            engine: cosmic_ext_ime_config::Engine::Rime,
+            ..self.cfg.clone()
+        };
+        match build_engine(&cfg) {
+            Ok(engine) => {
+                if self.cfg.engine == cosmic_ext_ime_config::Engine::Rime {
+                    self.engine = engine;
+                    self.sync_to_client(None);
+                }
+                log::info!("RIME redeployed");
+            }
+            Err(e) => log::error!("RIME redeploy failed: {e:#}"),
+        }
+    }
+
     /// The COSMIC theme changed on disk.
     pub fn reload_theme(&mut self) {
         self.popup

@@ -235,6 +235,11 @@ pub struct RimeState {
     pub schemas: Vec<RimeSchema>,
     /// Why RIME could not start, or empty.
     pub error: String,
+    /// Bumped by the settings app to ask the daemon to redeploy RIME
+    /// (needed after editing *.custom.yaml); the daemon records the value
+    /// it last served in `deploy_done`.
+    pub deploy_requested: u64,
+    pub deploy_done: u64,
 }
 
 impl RimeState {
@@ -245,4 +250,15 @@ impl RimeState {
     pub fn load(config: &Config) -> Self {
         Self::get_entry(config).unwrap_or_else(|(_, s)| s)
     }
+}
+
+/// Where RIME keeps user schemas, custom.yaml patches and dictionaries.
+pub fn rime_user_data_dir() -> std::path::PathBuf {
+    let data_home = std::env::var_os("XDG_DATA_HOME")
+        .map(std::path::PathBuf::from)
+        .or_else(|| {
+            std::env::var_os("HOME").map(|h| std::path::PathBuf::from(h).join(".local/share"))
+        })
+        .unwrap_or_else(|| std::path::PathBuf::from("."));
+    data_home.join("cosmic-ext-ime").join("rime")
 }

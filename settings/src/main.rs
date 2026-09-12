@@ -33,11 +33,14 @@ enum Message {
     FontSize(u32),
     Reloaded(PopeinputConfig),
     RimeStateChanged(RimeState),
+    RedeployRime,
+    OpenRimeFolder,
 }
 
 struct App {
     core: Core,
     handler: Option<Config>,
+    state_handler: Option<Config>,
     cfg: PopeinputConfig,
     rime: RimeState,
     engine_labels: Vec<&'static str>,
@@ -97,12 +100,15 @@ impl Application for App {
             .as_ref()
             .map(PopeinputConfig::load)
             .unwrap_or_default();
-        let rime = RimeState::handler()
-            .map(|h| RimeState::load(&h))
+        let state_handler = RimeState::handler().ok();
+        let rime = state_handler
+            .as_ref()
+            .map(RimeState::load)
             .unwrap_or_default();
         let mut app = App {
             core,
             handler,
+            state_handler,
             cfg,
             rime,
             engine_labels: Engine::ALL.iter().map(|e| e.label()).collect(),
@@ -156,6 +162,27 @@ impl Application for App {
             Message::RimeStateChanged(state) => {
                 self.rime = state;
                 self.rebuild_schema_labels();
+            }
+            Message::RedeployRime => {
+                let now = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map(|d| d.as_secs())
+                    .unwrap_or(1);
+                if let Some(h) = self.state_handler.as_ref() {
+                    if let Err(e) = self
+                        .rime
+                        .set_deploy_requested(h, now.max(self.rime.deploy_done + 1))
+                    {
+                        log::error!("requesting RIME redeploy: {e}");
+                    }
+                }
+            }
+            Message::OpenRimeFolder => {
+                let dir = cosmic_ext_ime_config::rime_user_data_dir();
+                let _ = std::fs::create_dir_all(&dir);
+                if let Err(e) = std::process::Command::new("xdg-open").arg(&dir).spawn() {
+                    log::error!("opening {}: {e}", dir.display());
+                }
             }
             Message::Mode(i) => {
                 let mode = Mode::ALL[i.min(Mode::ALL.len() - 1)];
@@ -215,16 +242,36 @@ impl Application for App {
         } else if self.rime.schemas.is_empty() {
             "Schema list appears once the RIME engine has started (a few seconds after selecting it).".to_string()
         } else {
-            "Schemas come from /usr/share/rime-data and ~/.local/share/cosmic-ext-ime/rime; \
-             edit default.custom.yaml there to add or remove them."
+            "Edit default.custom.yaml or any *.custom.yaml in the user data folder, then Redeploy."
                 .to_string()
         };
+        let deploying = self.rime.deploy_requested > self.rime.deploy_done;
         let rime = settings::section()
             .title("RIME 方案 Schema")
             .add(settings::item(
                 "方案 Schema",
                 widget::dropdown(&self.schema_labels, schema_idx, Message::RimeSchema),
             ))
+            .add(settings::item(
+                "重新部署 Redeploy",
+                widget::button::standard(if deploying {
+                    "部署中… Deploying…"
+                } else {
+                    "重新部署 Redeploy"
+                })
+                .on_press_maybe((!deploying).then_some(Message::RedeployRime)),
+            ))
+            .add(
+                settings::item::builder("使用者資料夾 User data folder")
+                    .description(
+                        cosmic_ext_ime_config::rime_user_data_dir()
+                            .display()
+                            .to_string(),
+                    )
+                    .control(
+                        widget::button::standard("開啟 Open").on_press(Message::OpenRimeFolder),
+                    ),
+            )
             .add(widget::text::caption(rime_hint));
 
         let input = settings::section()

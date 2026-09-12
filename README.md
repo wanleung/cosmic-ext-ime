@@ -81,7 +81,8 @@ Install schemas with apt (`rime-data-cangjie5`, `rime-data-quick5`,
 `librime-data-jyutping`, …). On first start cosmic-ext-ime writes
 `~/.local/share/cosmic-ext-ime/rime/default.custom.yaml` listing every installed
 schema so all of them get deployed; edit it to trim the list or tweak RIME the
-usual way (`*.custom.yaml`). User dictionaries live in the same directory.
+usual way (`*.custom.yaml`), then press **Redeploy** in the settings app.
+User dictionaries live in the same directory ("Open" button).
 
 ### Application support
 

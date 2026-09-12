@@ -8,7 +8,7 @@ use calloop::EventLoop;
 use calloop_wayland_source::WaylandSource;
 use cosmic_config::calloop::ConfigWatchSource;
 use cosmic_config::CosmicConfigEntry;
-use cosmic_ext_ime_config::PopeinputConfig;
+use cosmic_ext_ime_config::{PopeinputConfig, RimeState};
 use wayland_client::globals::registry_queue_init;
 use wayland_client::protocol::{wl_compositor::WlCompositor, wl_seat::WlSeat, wl_shm::WlShm};
 use wayland_client::Connection;
@@ -75,6 +75,18 @@ fn main() -> Result<()> {
             },
         )
         .map_err(|e| anyhow::anyhow!("registering config watcher: {e}"))?;
+
+    if let Ok(state_handler) = RimeState::handler() {
+        let source = ConfigWatchSource::new(&state_handler).context("watching RIME state")?;
+        handle
+            .insert_source(source, |(handler, _), _, state| {
+                let rime_state = RimeState::load(&handler);
+                if config::rime_deploy_pending(&rime_state) {
+                    state.redeploy_rime();
+                }
+            })
+            .map_err(|e| anyhow::anyhow!("registering state watcher: {e}"))?;
+    }
 
     for (id, version) in [
         (
