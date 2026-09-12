@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.wanleung.CosmicExtIme.Settings</id>
+  <name>Input Method for COSMIC</name>
+  <name xml:lang="zh_HK">COSMIC 輸入法</name>
+  <summary>Cangjie, Quick and RIME input for the COSMIC desktop</summary>
+  <summary xml:lang="zh_HK">COSMIC 桌面的倉頡、速成及 RIME 輸入法</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <developer id="io.github.wanleung">
+    <name>Wan Leung Wong</name>
+  </developer>
+  <description>
+    <p>
+      A native Wayland input method for COSMIC, made for Hong Kong users.
+      Type Traditional Chinese with Cangjie (倉頡) or Quick (速成) through
+      libcangjie2, or use any RIME schema — Cangjie, Quick, Jyutping, Pinyin
+      and more — through librime.
+    </p>
+    <p xml:lang="zh_HK">
+      為 COSMIC 桌面而設的原生 Wayland 輸入法，以香港用戶為本。可用 libcangjie2
+      輸入倉頡或速成，亦可透過 librime 使用任何 RIME 方案，包括倉頡、速成、粵拼及拼音。
+    </p>
+    <ul>
+      <li>Candidate window that follows the COSMIC theme and display scaling</li>
+      <li>Switch Chinese and English with COSMIC's own input-source switcher (Super+Space)</li>
+      <li>Works in COSMIC and GTK applications without IBus or Fcitx</li>
+      <li>Settings apply immediately, no restart needed</li>
+    </ul>
+  </description>
+  <launchable type="desktop-id">io.github.wanleung.CosmicExtIme.Settings.desktop</launchable>
+  <url type="homepage">https://github.com/wanleung/cosmic-ext-ime</url>
+  <url type="bugtracker">https://github.com/wanleung/cosmic-ext-ime/issues</url>
+  <url type="vcs-browser">https://github.com/wanleung/cosmic-ext-ime</url>
+  <categories>
+    <category>Settings</category>
+    <category>DesktopSettings</category>
+  </categories>
+  <keywords>
+    <keyword>input method</keyword>
+    <keyword>ime</keyword>
+    <keyword>cangjie</keyword>
+    <keyword>quick</keyword>
+    <keyword>rime</keyword>
+    <keyword>chinese</keyword>
+    <keyword xml:lang="zh_HK">倉頡</keyword>
+    <keyword xml:lang="zh_HK">速成</keyword>
+    <keyword xml:lang="zh_HK">輸入法</keyword>
+  </keywords>
+  <provides>
+    <binary>cosmic-ext-ime</binary>
+    <binary>cosmic-ext-ime-settings</binary>
+  </provides>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="0.1.0" date="2026-09-12">
+      <description>
+        <p>First release: Cangjie/Quick via libcangjie2, RIME via librime, candidate popup, settings app.</p>
+      </description>
+    </release>
+  </releases>
+</component>

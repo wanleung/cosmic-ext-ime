@@ -13,6 +13,7 @@ settings-dst := base-dir / 'bin' / name + '-settings'
 
 applications-dst := base-dir / 'share' / 'applications'
 man-dst := base-dir / 'share' / 'man' / 'man1'
+metainfo-dst := base-dir / 'share' / 'metainfo'
 autostart-dst := absolute_path(clean(rootdir / 'etc' / 'xdg' / 'autostart'))
 
 default: build-release
@@ -50,12 +51,14 @@ install:
     install -Dm0644 data/{{APPID}}.desktop {{autostart-dst}}/{{APPID}}.desktop
     install -Dm0644 data/man/cosmic-ext-ime.1 {{man-dst}}/cosmic-ext-ime.1
     install -Dm0644 data/man/cosmic-ext-ime-settings.1 {{man-dst}}/cosmic-ext-ime-settings.1
+    install -Dm0644 data/{{APPID}}.Settings.metainfo.xml {{metainfo-dst}}/{{APPID}}.Settings.metainfo.xml
 
 uninstall:
     rm -f {{bin-dst}} {{settings-dst}}
     rm -f {{applications-dst}}/{{APPID}}.desktop {{applications-dst}}/{{APPID}}.Settings.desktop
     rm -f {{autostart-dst}}/{{APPID}}.desktop
     rm -f {{man-dst}}/cosmic-ext-ime.1 {{man-dst}}/cosmic-ext-ime-settings.1
+    rm -f {{metainfo-dst}}/{{APPID}}.Settings.metainfo.xml
 
 home := env('HOME')
 user-base := home / '.local'
@@ -78,13 +81,32 @@ uninstall-user:
     rm -f {{user-base}}/share/man/man1/{{name}}.1 {{user-base}}/share/man/man1/{{name}}-settings.1
     -update-desktop-database {{user-base}}/share/applications
 
-# Vendor dependencies into vendor.tar so the package builds offline
+# Vendor dependencies into vendor.tar so the package builds offline.
+# Filtered to Linux targets (needs `cargo install cargo-vendor-filterer`).
 vendor:
     #!/usr/bin/env bash
-    set -e
+    set -euo pipefail
+    rm -rf .cargo vendor
     mkdir -p .cargo
-    cargo vendor --sync Cargo.toml | head -n -1 > .cargo/config.toml
-    echo 'directory = "vendor"' >> .cargo/config.toml
+    if command -v cargo-vendor-filterer >/dev/null; then
+        cargo vendor-filterer --platform=x86_64-unknown-linux-gnu --platform=aarch64-unknown-linux-gnu --tier=2 vendor
+    else
+        echo "cargo-vendor-filterer not found; vendoring every platform (much larger)" >&2
+        cargo vendor vendor >/dev/null
+    fi
+    python3 - > .cargo/config.toml <<'PY'
+    import re
+    lock = open("Cargo.lock").read()
+    print('[source.crates-io]\nreplace-with = "vendored-sources"\n')
+    for src in sorted(set(re.findall(r'^source = "(git\+[^"]+)"', lock, re.M))):
+        url, _, frag = src[4:].partition("#")
+        base, _, query = url.partition("?")
+        print(f'[source."{src.split("#")[0]}"]\ngit = "{base}"')
+        for key, val in (kv.split("=", 1) for kv in query.split("&") if "=" in kv):
+            print(f'{key} = "{val}"')
+        print('replace-with = "vendored-sources"\n')
+    print('[source.vendored-sources]\ndirectory = "vendor"')
+    PY
     tar pcf vendor.tar .cargo vendor
     rm -rf .cargo vendor
 
