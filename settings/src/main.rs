@@ -134,7 +134,7 @@ impl Application for App {
             ))
             .add(settings::item(
                 "每頁候選字數 Candidates per page",
-                widget::spin_button("", "candidates per page", cfg.page_size, 1, 1, 9, Message::PageSize),
+                widget::spin_button(cfg.page_size.to_string(), "candidates per page", cfg.page_size, 1, 1, 9, Message::PageSize),
             ))
             .add(
                 settings::item::builder("全形字元 Full-width characters")
@@ -174,7 +174,7 @@ impl Application for App {
 
         let popup = settings::section().title("候選字視窗 Candidate window").add(settings::item(
             "字體大小 Font size",
-            widget::spin_button("", "font size", cfg.popup_font_size, 1, 8, 48, Message::FontSize),
+            widget::spin_button(cfg.popup_font_size.to_string(), "font size", cfg.popup_font_size, 1, 8, 48, Message::FontSize),
         ));
 
         let note = widget::text::caption("Changes apply immediately — no restart needed.");
