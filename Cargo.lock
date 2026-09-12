@@ -3816,6 +3816,7 @@ dependencies = [
  "popeinput-cangjie",
  "popeinput-config",
  "popeinput-engine",
+ "popeinput-rime",
  "rustix 1.1.4",
  "wayland-client",
  "wayland-protocols-misc",
@@ -3842,6 +3843,15 @@ dependencies = [
 [[package]]
 name = "popeinput-engine"
 version = "0.1.0"
+
+[[package]]
+name = "popeinput-rime"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "popeinput-engine",
+ "rime-sys",
+]
 
 [[package]]
 name = "popeinput-settings"
@@ -4224,6 +4234,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "47b34b781b31e5d73e9fbc8689c70551fd1ade9a19e3e28cfec8580a79290cc4"
 dependencies = [
  "bytemuck",
+]
+
+[[package]]
+name = "rime-sys"
+version = "0.1.0"
+dependencies = [
+ "bindgen",
+ "pkg-config",
 ]
 
 [[package]]

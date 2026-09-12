@@ -76,7 +76,9 @@ pub enum Response {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct PageInfo {
     pub page: usize,
-    pub total_pages: usize,
+    /// Unknown for engines that only report whether a next page exists.
+    pub total_pages: Option<usize>,
+    pub has_next: bool,
     pub page_size: usize,
 }
 

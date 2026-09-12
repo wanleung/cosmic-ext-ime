@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/engine", "crates/cangjie-sys", "crates/cangjie", "crates/config", "settings"]
+members = ["crates/engine", "crates/cangjie-sys", "crates/cangjie", "crates/rime-sys", "crates/rime", "crates/config", "settings"]
 
 [workspace.dependencies]
 # Pinned to the libcosmic revision cosmic-settings 1.7.0 (Pop!_OS 24.04) is built from.
@@ -23,6 +23,7 @@ description = "Native Wayland (zwp_input_method_v2) Chinese input method for COS
 [dependencies]
 popeinput-engine = { path = "crates/engine" }
 popeinput-cangjie = { path = "crates/cangjie" }
+popeinput-rime = { path = "crates/rime" }
 popeinput-config = { path = "crates/config" }
 cosmic-config = { workspace = true, features = ["calloop"] }
 calloop = "0.14"

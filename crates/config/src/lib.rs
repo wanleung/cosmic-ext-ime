@@ -11,6 +11,27 @@ use serde::{Deserialize, Serialize};
 
 pub const APP_ID: &str = "io.github.wanleung.popeinput";
 pub const CONFIG_VERSION: u64 = 1;
+pub const STATE_VERSION: u64 = 1;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum Engine {
+    /// libcangjie2: Cangjie / Quick, tuned for Hong Kong users.
+    #[default]
+    Cangjie,
+    /// librime: any RIME schema (Cangjie, Quick, Jyutping, Pinyin, ...).
+    Rime,
+}
+
+impl Engine {
+    pub const ALL: [Engine; 2] = [Engine::Cangjie, Engine::Rime];
+
+    pub fn label(self) -> &'static str {
+        match self {
+            Engine::Cangjie => "倉頡／速成 (libcangjie)",
+            Engine::Rime => "RIME 中州韻",
+        }
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum Mode {
@@ -107,6 +128,9 @@ impl CharSet {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, CosmicConfigEntry)]
 #[version = 1]
 pub struct PopeinputConfig {
+    pub engine: Engine,
+    /// RIME schema id (e.g. "cangjie5"); empty means RIME's own default.
+    pub rime_schema: String,
     pub mode: Mode,
     pub cangjie_version: CangjieVersion,
     pub char_sets: Vec<CharSet>,
@@ -127,6 +151,8 @@ pub struct PopeinputConfig {
 impl Default for PopeinputConfig {
     fn default() -> Self {
         PopeinputConfig {
+            engine: Engine::Cangjie,
+            rime_schema: String::new(),
             mode: Mode::Cangjie,
             cangjie_version: CangjieVersion::V5,
             char_sets: vec![CharSet::Big5, CharSet::Hkscs],
@@ -181,11 +207,40 @@ impl PopeinputConfig {
     /// The settings a change to which requires rebuilding the engine.
     pub fn engine_fields(&self) -> impl PartialEq {
         (
+            self.engine,
+            self.rime_schema.clone(),
             self.mode,
             self.cangjie_version,
             self.char_sets.clone(),
             self.page_size,
             self.fullwidth_chars,
         )
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub struct RimeSchema {
+    pub id: String,
+    pub name: String,
+}
+
+/// Runtime facts the daemon publishes for the settings UI (cosmic-config
+/// *state*, under ~/.local/state), so the UI never needs to link librime.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, CosmicConfigEntry, Default)]
+#[version = 1]
+pub struct RimeState {
+    /// Schemas RIME has deployed; filled once the RIME engine has started.
+    pub schemas: Vec<RimeSchema>,
+    /// Why RIME could not start, or empty.
+    pub error: String,
+}
+
+impl RimeState {
+    pub fn handler() -> Result<Config, cosmic_config::Error> {
+        Config::new_state(APP_ID, STATE_VERSION)
+    }
+
+    pub fn load(config: &Config) -> Self {
+        Self::get_entry(config).unwrap_or_else(|(_, s)| s)
     }
 }

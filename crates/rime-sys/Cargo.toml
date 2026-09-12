@@ -1,0 +1,14 @@
+[package]
+name = "rime-sys"
+version.workspace = true
+edition.workspace = true
+license = "BSD-3-Clause"
+description = "Raw FFI bindings to librime's C API"
+links = "rime"
+build = "build.rs"
+
+[dependencies]
+
+[build-dependencies]
+bindgen = "0.73"
+pkg-config = "0.3"

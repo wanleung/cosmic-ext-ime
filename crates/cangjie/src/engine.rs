@@ -370,7 +370,8 @@ impl InputEngine for CangjieEngine {
     fn page_info(&self) -> PageInfo {
         PageInfo {
             page: self.page,
-            total_pages: self.total_pages(),
+            total_pages: Some(self.total_pages()),
+            has_next: self.page + 1 < self.total_pages(),
             page_size: self.cfg.page_size,
         }
     }

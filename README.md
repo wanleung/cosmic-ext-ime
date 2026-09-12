@@ -2,8 +2,8 @@
 
 Native Wayland Chinese input method for the [COSMIC](https://system76.com/cosmic) desktop
 (Pop!_OS), built for Hong Kong users: **Cangjie (倉頡)** and **Quick (速成)** via
-[libcangjie2](https://cangjians.github.io/projects/libcangjie/), with
-[RIME](https://rime.im/) planned as a second engine.
+[libcangjie2](https://cangjians.github.io/projects/libcangjie/), or any
+[RIME](https://rime.im/) schema via librime (Cangjie, Quick, Jyutping, Pinyin, …).
 
 ## Why
 
@@ -35,6 +35,8 @@ crates/config         settings schema stored via cosmic-config (the daemon/UI co
 crates/engine         InputEngine trait + shared types (no Wayland, no FFI)
 crates/cangjie-sys    bindgen FFI to libcangjie2
 crates/cangjie        safe wrapper + Cangjie/Quick engine (tested against the real DB)
+crates/rime-sys       bindgen FFI to librime's C API
+crates/rime           RIME engine: one librime session per engine, schemas from rime-data
 ```
 
 ## Install
@@ -56,7 +58,9 @@ Only one input method may hold the seat: stop IBus/Fcitx5 first (`ibus exit`,
 Open **popeinput Settings** from the app library (search "popeinput" or "倉頡"),
 or run `popeinput-settings`. Everything applies immediately — no restart:
 
-- Mode (倉頡 / 速成), Cangjie 3 / 5, candidates per page, full-width characters
+- Engine: libcangjie (Cangjie / Quick) or RIME
+- RIME: pick any deployed schema; the list is published by the daemon once RIME starts
+- libcangjie: Mode (倉頡 / 速成), Cangjie 3 / 5, candidates per page, full-width characters
 - Character sets: Big5, HKSCS, all Chinese, Kanji, Hiragana, Katakana, Zhuyin,
   punctuation, symbols (kana are typed as `zj` + romaji, e.g. `zja` → あ)
 - How to switch Chinese / English (see below)
@@ -66,6 +70,14 @@ Settings are stored through cosmic-config in
 `~/.config/cosmic/io.github.wanleung.popeinput/v1/`, one file per key, so any
 tool that writes that store — this app, a future COSMIC Settings page, or
 `echo Quick > .../v1/mode` — is picked up live by the daemon.
+
+### RIME
+
+Install schemas with apt (`rime-data-cangjie5`, `rime-data-quick5`,
+`librime-data-jyutping`, …). On first start popeinput writes
+`~/.local/share/popeinput/rime/default.custom.yaml` listing every installed
+schema so all of them get deployed; edit it to trim the list or tweak RIME the
+usual way (`*.custom.yaml`). User dictionaries live in the same directory.
 
 ### Switching between Chinese and English
 
@@ -78,8 +90,8 @@ be enabled in the settings app.
 ## Development
 
 ```sh
-sudo apt install libcangjie2-dev libsqlite3-dev libxkbcommon-dev libclang-dev libwayland-dev
-cargo test --workspace     # engine tests hit the real libcangjie2 database
+sudo apt install libcangjie2-dev libsqlite3-dev librime-dev libxkbcommon-dev libclang-dev libwayland-dev
+cargo test --workspace     # engine tests hit the real libcangjie2 and rime-data
 RUST_LOG=debug cargo run --release -p popeinput
 ```
 
@@ -92,6 +104,7 @@ installed `cosmic-settings` is built from; bump it in `Cargo.toml` when COSMIC u
 - [x] Settings app (libcosmic) with live reload via cosmic-config
 - [x] Autostart via XDG autostart entry
 - [ ] HiDPI / fractional scaling for the popup; follow the COSMIC theme
-- [ ] librime engine (`crates/rime-sys`, `crates/rime`) — Jyutping, rime-cangjie schemas
+- [x] librime engine
+- [ ] Pass key releases to RIME (needed for its Shift-toggles-ASCII option)
 - [ ] Integration in COSMIC Settings → Keyboard (upstream)
 - [ ] Debian packaging for Pop!_OS

@@ -46,7 +46,7 @@ fn space_commits_first_when_one_page_else_pages() {
     let info = e.page_info();
     let first = e.candidates()[0].text.clone();
     let r = e.process_key(key(Key::Space));
-    if info.total_pages > 1 {
+    if info.total_pages.unwrap() > 1 {
         assert_eq!(r, Response::Consumed);
         assert_eq!(e.page_info().page, 1);
     } else {

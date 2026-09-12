@@ -109,8 +109,18 @@ where
                 spans.push((format!("  {h}"), base.clone().color(hint)));
             }
         }
-        if page.total_pages > 1 {
-            spans.push((format!("\n{}/{}", page.page + 1, page.total_pages), base.clone().color(hint)));
+        let paging = match page.total_pages {
+            Some(total) if total > 1 => Some(format!("\n{}/{}", page.page + 1, total)),
+            None if page.page > 0 || page.has_next => Some(format!(
+                "\n{}{}{}",
+                if page.page > 0 { "◂ " } else { "" },
+                page.page + 1,
+                if page.has_next { " ▸" } else { "" }
+            )),
+            _ => None,
+        };
+        if let Some(p) = paging {
+            spans.push((p, base.clone().color(hint)));
         }
 
         let metrics = Metrics::new(self.style.font_size, self.style.font_size * 1.5);

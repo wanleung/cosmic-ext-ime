@@ -6,7 +6,9 @@ use cosmic::cosmic_config::{self, Config};
 use cosmic::iced::{Length, Size};
 use cosmic::widget::{self, settings};
 use cosmic::{executor, Application, Element};
-use popeinput_config::{CangjieVersion, CharSet, Mode, PopeinputConfig, APP_ID, CONFIG_VERSION};
+use popeinput_config::{
+    CangjieVersion, CharSet, Engine, Mode, PopeinputConfig, RimeState, APP_ID, CONFIG_VERSION, STATE_VERSION,
+};
 
 const SETTINGS_APP_ID: &str = "io.github.wanleung.popeinput.Settings";
 
@@ -17,6 +19,8 @@ fn main() -> cosmic::iced::Result {
 
 #[derive(Debug, Clone)]
 enum Message {
+    Engine(usize),
+    RimeSchema(usize),
     Mode(usize),
     Version(usize),
     PageSize(u32),
@@ -27,14 +31,27 @@ enum Message {
     ShiftTap(bool),
     FontSize(u32),
     Reloaded(PopeinputConfig),
+    RimeStateChanged(RimeState),
 }
 
 struct App {
     core: Core,
     handler: Option<Config>,
     cfg: PopeinputConfig,
+    rime: RimeState,
+    engine_labels: Vec<&'static str>,
     mode_labels: Vec<&'static str>,
     version_labels: Vec<&'static str>,
+    /// Index 0 is "RIME default"; the rest mirror `rime.schemas`.
+    schema_labels: Vec<String>,
+}
+
+impl App {
+    fn rebuild_schema_labels(&mut self) {
+        self.schema_labels = std::iter::once("RIME 預設 (default)".to_string())
+            .chain(self.rime.schemas.iter().map(|s| format!("{} ({})", s.name, s.id)))
+            .collect();
+    }
 }
 
 impl App {
@@ -68,13 +85,18 @@ impl Application for App {
             .map_err(|e| log::error!("opening cosmic-config: {e}"))
             .ok();
         let cfg = handler.as_ref().map(PopeinputConfig::load).unwrap_or_default();
-        let app = App {
+        let rime = RimeState::handler().map(|h| RimeState::load(&h)).unwrap_or_default();
+        let mut app = App {
             core,
             handler,
             cfg,
+            rime,
+            engine_labels: Engine::ALL.iter().map(|e| e.label()).collect(),
             mode_labels: Mode::ALL.iter().map(|m| m.label()).collect(),
             version_labels: CangjieVersion::ALL.iter().map(|v| v.label()).collect(),
+            schema_labels: Vec::new(),
         };
+        app.rebuild_schema_labels();
         (app, Task::none())
     }
 
@@ -83,12 +105,32 @@ impl Application for App {
     }
 
     fn subscription(&self) -> cosmic::iced::Subscription<Message> {
-        cosmic_config::config_subscription::<_, PopeinputConfig>(0u32, APP_ID.into(), CONFIG_VERSION)
-            .map(|update| Message::Reloaded(update.config))
+        cosmic::iced::Subscription::batch([
+            cosmic_config::config_subscription::<_, PopeinputConfig>(0u32, APP_ID.into(), CONFIG_VERSION)
+                .map(|update| Message::Reloaded(update.config)),
+            cosmic_config::config_state_subscription::<_, RimeState>(1u32, APP_ID.into(), STATE_VERSION)
+                .map(|update| Message::RimeStateChanged(update.config)),
+        ])
     }
 
     fn update(&mut self, message: Message) -> Task<Message> {
         match message {
+            Message::Engine(i) => {
+                let engine = Engine::ALL[i.min(Engine::ALL.len() - 1)];
+                self.write(|c, h| c.set_engine(h, engine));
+            }
+            Message::RimeSchema(i) => {
+                let id = if i == 0 {
+                    String::new()
+                } else {
+                    self.rime.schemas.get(i - 1).map(|s| s.id.clone()).unwrap_or_default()
+                };
+                self.write(|c, h| c.set_rime_schema(h, id));
+            }
+            Message::RimeStateChanged(state) => {
+                self.rime = state;
+                self.rebuild_schema_labels();
+            }
             Message::Mode(i) => {
                 let mode = Mode::ALL[i.min(Mode::ALL.len() - 1)];
                 self.write(|c, h| c.set_mode(h, mode));
@@ -119,11 +161,39 @@ impl Application for App {
 
     fn view(&self) -> Element<'_, Message> {
         let cfg = &self.cfg;
+        let engine_idx = Engine::ALL.iter().position(|e| *e == cfg.engine);
         let mode_idx = Mode::ALL.iter().position(|m| *m == cfg.mode);
         let version_idx = CangjieVersion::ALL.iter().position(|v| *v == cfg.cangjie_version);
+        let is_rime = cfg.engine == Engine::Rime;
+
+        let engine = settings::section()
+            .title("輸入引擎 Engine")
+            .add(settings::item("引擎 Engine", widget::dropdown(&self.engine_labels, engine_idx, Message::Engine)));
+
+        let schema_idx = if cfg.rime_schema.is_empty() {
+            Some(0)
+        } else {
+            self.rime.schemas.iter().position(|s| s.id == cfg.rime_schema).map(|i| i + 1)
+        };
+        let rime_hint = if !self.rime.error.is_empty() {
+            self.rime.error.clone()
+        } else if self.rime.schemas.is_empty() {
+            "Schema list appears once the RIME engine has started (a few seconds after selecting it).".to_string()
+        } else {
+            "Schemas come from /usr/share/rime-data and ~/.local/share/popeinput/rime; \
+             edit default.custom.yaml there to add or remove them."
+                .to_string()
+        };
+        let rime = settings::section()
+            .title("RIME 方案 Schema")
+            .add(settings::item(
+                "方案 Schema",
+                widget::dropdown(&self.schema_labels, schema_idx, Message::RimeSchema),
+            ))
+            .add(widget::text::caption(rime_hint));
 
         let input = settings::section()
-            .title("輸入法 Input method")
+            .title("倉頡 Cangjie (libcangjie)")
             .add(settings::item(
                 "輸入方式 Mode",
                 widget::dropdown(&self.mode_labels, mode_idx, Message::Mode),
@@ -179,12 +249,14 @@ impl Application for App {
 
         let note = widget::text::caption("Changes apply immediately — no restart needed.");
 
-        let content = widget::column::with_capacity(5)
+        let content = widget::column::with_capacity(7)
             .spacing(24)
             .padding([0, 24, 24, 24])
             .push(note)
-            .push(input)
-            .push(sets)
+            .push(engine)
+            .push_maybe(is_rime.then_some(rime))
+            .push_maybe((!is_rime).then_some(input))
+            .push_maybe((!is_rime).then_some(sets))
             .push(switching)
             .push(popup);
 
