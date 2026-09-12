@@ -5,7 +5,7 @@ Maintainer: Wan Leung Wong <me@wanleung.com>
 Build-Depends:
     debhelper-compat (= 13),
     just (>= 1.13.0),
-    pkg-config,
+    pkgconf | pkg-config,
     cargo-1.91 | cargo (>= 1.88),
     rustc-1.91 | rustc (>= 1.88),
     libclang-dev,
