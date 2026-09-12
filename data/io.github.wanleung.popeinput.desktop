@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=popeinput
+Comment=Cangjie / Quick input method daemon for COSMIC
+Comment[zh_HK]=COSMIC 倉頡／速成輸入法
+Exec=popeinput
+Icon=input-keyboard-symbolic
+Terminal=false
+Type=Application
+NoDisplay=true
+X-GNOME-Autostart-enabled=true
+OnlyShowIn=COSMIC;

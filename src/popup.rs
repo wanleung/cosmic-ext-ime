@@ -13,8 +13,6 @@ use wayland_protocols_misc::zwp_input_method_v2::client::{
     zwp_input_method_v2::ZwpInputMethodV2, zwp_input_popup_surface_v2::ZwpInputPopupSurfaceV2,
 };
 
-use crate::config;
-
 const PADDING: i32 = 8;
 const BORDER: i32 = 1;
 
@@ -27,17 +25,13 @@ pub struct Style {
 }
 
 impl Style {
-    pub fn from_config(cfg: &config::Popup) -> Self {
-        let d = config::Popup::default();
-        let pick = |s: &str, fallback: &str| {
-            config::parse_hex(s).or_else(|| config::parse_hex(fallback)).unwrap()
-        };
+    fn new(font_size: f32) -> Self {
         Style {
-            font_size: cfg.font_size.max(6.0),
-            background: pick(&cfg.background, &d.background),
-            foreground: pick(&cfg.foreground, &d.foreground),
-            hint: pick(&cfg.hint, &d.hint),
-            border: pick(&cfg.border, &d.border),
+            font_size: font_size.clamp(6.0, 72.0),
+            background: [0x1e, 0x1e, 0x1e],
+            foreground: [0xf0, 0xf0, 0xf0],
+            hint: [0x8a, 0x8a, 0x8a],
+            border: [0x5a, 0x5a, 0x5a],
         }
     }
 }
@@ -66,7 +60,7 @@ where
         compositor: &wl_compositor::WlCompositor,
         shm: &wl_shm::WlShm,
         input_method: &ZwpInputMethodV2,
-        style: Style,
+        font_size: f32,
     ) -> Self {
         let surface = compositor.create_surface(qh, ());
         let popup = input_method.get_input_popup_surface(&surface, qh, ());
@@ -79,9 +73,13 @@ where
             qh: qh.clone(),
             font_system,
             swash_cache: SwashCache::new(),
-            style,
+            style: Style::new(font_size),
             visible: false,
         }
+    }
+
+    pub fn set_font_size(&mut self, font_size: f32) {
+        self.style = Style::new(font_size);
     }
 
     pub fn hide(&mut self) {

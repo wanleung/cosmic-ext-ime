@@ -23,13 +23,15 @@ use wayland_protocols_misc::zwp_virtual_keyboard_v1::client::{
 };
 use xkbcommon::xkb;
 
-use crate::config::Config;
+use popeinput_config::PopeinputConfig;
+
+use crate::config::build_engine;
 use crate::keys;
-use crate::popup::{Popup, Style};
+use crate::popup::Popup;
 
 pub struct State {
     qh: QueueHandle<Self>,
-    cfg: Config,
+    cfg: PopeinputConfig,
     input_method: ZwpInputMethodV2,
     /// Held only while a text field is active; the compositor drops the grab
     /// on deactivate, so it is re-requested on every activate.
@@ -72,11 +74,11 @@ impl State {
         im_manager: &ZwpInputMethodManagerV2,
         vk_manager: &ZwpVirtualKeyboardManagerV1,
         engine: Box<dyn InputEngine>,
-        cfg: Config,
+        cfg: PopeinputConfig,
     ) -> Self {
         let input_method = im_manager.get_input_method(seat, qh, ());
         let virtual_keyboard = vk_manager.create_virtual_keyboard(seat, qh, ());
-        let popup = Popup::new(qh, compositor, shm, &input_method, Style::from_config(&cfg.popup));
+        let popup = Popup::new(qh, compositor, shm, &input_method, cfg.popup_font_size as f32);
         State {
             qh: qh.clone(),
             cfg,
@@ -108,6 +110,32 @@ impl State {
 
     pub fn should_exit(&self) -> bool {
         self.exit
+    }
+
+    /// Apply settings changed on disk without restarting.
+    pub fn apply_config(&mut self, cfg: PopeinputConfig) {
+        if cfg == self.cfg {
+            return;
+        }
+        if cfg.engine_fields() != self.cfg.engine_fields() {
+            match build_engine(&cfg) {
+                Ok(engine) => {
+                    self.engine = engine;
+                    self.sync_to_client(None);
+                    log::info!("engine reloaded ({})", self.engine.name());
+                }
+                Err(e) => log::error!("keeping previous engine: {e:#}"),
+            }
+        }
+        self.popup.set_font_size(cfg.popup_font_size as f32);
+        self.cfg = cfg;
+        self.follow_layout = self.cfg.follow_layout
+            && self.keymap.as_ref().is_some_and(|k| k.num_layouts() > 1);
+        if self.follow_layout {
+            self.apply_layout();
+        } else {
+            self.set_enabled(true);
+        }
     }
 
     fn set_enabled(&mut self, enabled: bool) {
@@ -171,8 +199,8 @@ impl State {
                     .map(|i| keymap.layout_get_name(i).to_string())
                     .collect();
                 log::debug!("keymap loaded ({size} bytes), layouts {layouts:?}");
-                self.follow_layout = self.cfg.toggle.follow_layout && layouts.len() > 1;
-                if self.cfg.toggle.follow_layout && layouts.len() == 1 {
+                self.follow_layout = self.cfg.follow_layout && layouts.len() > 1;
+                if self.cfg.follow_layout && layouts.len() == 1 {
                     log::info!(
                         "only one keyboard layout configured; add a Chinese input source in \
                          COSMIC Settings > Keyboard to switch with Super+Space"
@@ -241,13 +269,13 @@ impl State {
         log::trace!("key {key} -> {input:?}");
 
         let is_shift = keys::is_shift(keys::keysym(xkb_state, keycode));
-        self.shift_tap_pending = self.cfg.toggle.shift_tap
+        self.shift_tap_pending = self.cfg.shift_tap_toggle
             && is_shift
             && !input.modifiers.ctrl
             && !input.modifiers.alt
             && !input.modifiers.logo;
 
-        if self.cfg.toggle.ctrl_space && input.key == Key::Space && input.modifiers.ctrl {
+        if self.cfg.ctrl_space_toggle && input.key == Key::Space && input.modifiers.ctrl {
             self.consumed_keys.insert(key);
             self.toggle_enabled();
             return;

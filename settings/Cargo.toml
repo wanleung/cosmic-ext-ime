@@ -1,0 +1,12 @@
+[package]
+name = "popeinput-settings"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Settings app for popeinput, built with libcosmic"
+
+[dependencies]
+popeinput-config = { path = "../crates/config" }
+libcosmic = { workspace = true, default-features = false, features = ["winit", "tokio", "wayland", "a11y", "multi-window", "dbus-config"] }
+log = "0.4"
+env_logger = "0.11"

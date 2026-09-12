@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=popeinput Settings
+Name[zh_HK]=popeinput 設定
+Comment=Configure the Cangjie / Quick input method for COSMIC
+Comment[zh_HK]=設定 COSMIC 的倉頡／速成輸入法
+Exec=popeinput-settings
+Icon=input-keyboard-symbolic
+Terminal=false
+Type=Application
+Categories=Settings;DesktopSettings;
+Keywords=cangjie;quick;chinese;input;ime;倉頡;速成;輸入法;
