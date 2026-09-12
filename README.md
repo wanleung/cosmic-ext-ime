@@ -41,15 +41,27 @@ crates/rime           RIME engine: one librime session per engine, schemas from 
 
 ## Install
 
+Pop!_OS 24.04 / Ubuntu 24.04 (COSMIC):
+
 ```sh
-cargo install just          # or: sudo apt install just
+sudo add-apt-repository ppa:wanleungwong/cosmic-ext-ime
+sudo apt install cosmic-ext-ime
+```
+
+Or grab the `.deb` from the [releases page](https://github.com/wanleung/cosmic-ext-ime/releases)
+and `sudo apt install ./cosmic-ext-ime_*.deb`.
+
+From source:
+
+```sh
+sudo apt install just       # or: cargo install just
 just install-user           # binaries to ~/.local/bin, launcher entries, autostart
 ```
 
-`just install` does the same system-wide under /usr/local, and `just deb`
-builds a Debian package (`sudo apt install debhelper devscripts just rust-all`
-first; `sudo apt install ../cosmic-ext-ime_*.deb` then pulls in everything else).
-Use one of these, not both — `just uninstall-user` removes the per-user copy.
+`just install` does the same system-wide under /usr/local, `just deb` builds
+the Debian package locally, and `just ppa` uploads a signed source package to
+the PPA. Use one install method, not several — `just uninstall-user` removes
+the per-user copy.
 
 After installing, log out and back in (or run `cosmic-ext-ime` once by hand) — it
 autostarts with every COSMIC session from then on.
