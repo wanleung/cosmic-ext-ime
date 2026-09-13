@@ -9,3 +9,4 @@
 /debian/*.log
 /debian/debhelper-build-stamp
 /dist
+/data/blog
