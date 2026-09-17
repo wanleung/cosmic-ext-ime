@@ -132,3 +132,26 @@ ppa key='D6C7DB3D7C3E5310' target='ppa:wanleungwong/cosmic-ext-ime':
     dpkg-buildpackage -S -sa -d -k{{key}}
     version=$(dpkg-parsechangelog -S Version)
     dput {{target}} ../cosmic-ext-ime_${version}_source.changes
+
+# Bump the version everywhere and create the release commit + tag.
+# Usage: just release 0.2.0 "Summary line for the changelog"
+release version summary:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    test -z "$(git status --porcelain)" || { echo "working tree not clean" >&2; exit 1; }
+    sed -i '0,/^version = "[^"]*"/s//version = "{{version}}"/' Cargo.toml
+    sed -i 's/cosmic-ext-ime [0-9][0-9.]*"/cosmic-ext-ime {{version}}"/' data/man/cosmic-ext-ime.1 data/man/cosmic-ext-ime-settings.1
+    python3 - <<'PY'
+    import datetime, re
+    v = "{{version}}"; today = datetime.date.today().isoformat()
+    p = "data/io.github.wanleung.CosmicExtIme.Settings.metainfo.xml"; s = open(p).read()
+    if f'version="{v}"' not in s:
+        s = s.replace("  <releases>\n", f'  <releases>\n    <release version="{v}" date="{today}">\n      <description>\n        <p>{{summary}}</p>\n      </description>\n    </release>\n', 1)
+    open(p, "w").write(s)
+    PY
+    DEBFULLNAME="Wan Leung Wong" DEBEMAIL="me@wanleung.com" dch --newversion "{{version}}" --distribution noble "{{summary}}"
+    cargo update -w --offline >/dev/null 2>&1 || cargo update -w
+    git add -A
+    git commit -m "Release {{version}}"
+    git tag -a "v{{version}}" -m "cosmic-ext-ime {{version}}"
+    echo "Now: git push && git push origin v{{version}} && just ppa"
