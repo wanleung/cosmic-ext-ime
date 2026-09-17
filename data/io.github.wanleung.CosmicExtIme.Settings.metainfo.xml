@@ -14,8 +14,8 @@
     <p>
       A native Wayland input method for COSMIC, made for Hong Kong users.
       Type Traditional Chinese with Cangjie (倉頡) or Quick (速成) through
-      libcangjie2, or use any RIME schema — Cangjie, Quick, Jyutping, Pinyin
-      and more — through librime.
+      libcangjie2, smart Pinyin or Shuangpin through libpinyin, or use any RIME
+      schema — Cangjie, Quick, Jyutping, Pinyin and more — through librime.
     </p>
     <p xml:lang="zh_HK">
       為 COSMIC 桌面而設的原生 Wayland 輸入法，以香港用戶為本。可用 libcangjie2

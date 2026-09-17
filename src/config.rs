@@ -4,7 +4,7 @@ use anyhow::{Context, Result};
 use cosmic_config::CosmicConfigEntry;
 use cosmic_ext_ime_cangjie::{CangjieEngine, Config as EngineConfig, Filter, Mode, Version};
 use cosmic_ext_ime_config::{
-    CangjieVersion, CharSet, Engine, PopeinputConfig, RimeSchema, RimeState,
+    CangjieVersion, CharSet, Engine, PinyinScheme, PopeinputConfig, RimeSchema, RimeState,
 };
 use cosmic_ext_ime_engine::InputEngine;
 
@@ -16,7 +16,32 @@ pub fn build_engine(cfg: &PopeinputConfig) -> Result<Box<dyn InputEngine>> {
             publish_rime_state(result.as_ref().err());
             result
         }
+        Engine::Pinyin => build_pinyin(cfg),
     }
+}
+
+fn build_pinyin(cfg: &PopeinputConfig) -> Result<Box<dyn InputEngine>> {
+    use cosmic_ext_ime_pinyin::Scheme;
+    let scheme = match cfg.pinyin_scheme {
+        PinyinScheme::Full => Scheme::Full,
+        PinyinScheme::DoubleZrm => Scheme::DoubleZrm,
+        PinyinScheme::DoubleMs => Scheme::DoubleMs,
+        PinyinScheme::DoubleZiguang => Scheme::DoubleZiguang,
+        PinyinScheme::DoubleAbc => Scheme::DoubleAbc,
+        PinyinScheme::DoublePyjj => Scheme::DoublePyjj,
+        PinyinScheme::DoubleXhe => Scheme::DoubleXhe,
+    };
+    let engine = cosmic_ext_ime_pinyin::PinyinEngine::new(cosmic_ext_ime_pinyin::Config {
+        scheme,
+        fuzzy: cfg.pinyin_fuzzy,
+        incomplete: cfg.pinyin_incomplete,
+        page_size: (cfg.page_size as usize).clamp(1, 9),
+        fullwidth_punctuation: cfg.fullwidth_chars,
+        ..cosmic_ext_ime_pinyin::Config::default()
+    })
+    .map_err(|e| anyhow::anyhow!(e))
+    .context("failed to start libpinyin")?;
+    Ok(Box::new(engine))
 }
 
 fn build_rime(cfg: &PopeinputConfig) -> Result<Box<dyn InputEngine>> {

@@ -2,7 +2,8 @@
 
 Native Wayland input method for the [COSMIC](https://system76.com/cosmic) desktop
 (Pop!_OS), made for Hong Kong users but usable with any RIME schema: **Cangjie (倉頡)** and **Quick (速成)** via
-[libcangjie2](https://cangjians.github.io/projects/libcangjie/), or any
+[libcangjie2](https://cangjians.github.io/projects/libcangjie/), smart Pinyin /
+Shuangpin via [libpinyin](https://github.com/libpinyin/libpinyin), or any
 [RIME](https://rime.im/) schema via librime (Cangjie, Quick, Jyutping, Pinyin, …).
 
 <p>
@@ -43,6 +44,8 @@ crates/cangjie-sys    bindgen FFI to libcangjie2
 crates/cangjie        safe wrapper + Cangjie/Quick engine (tested against the real DB)
 crates/rime-sys       bindgen FFI to librime's C API
 crates/rime           RIME engine: one librime session per engine, schemas from rime-data
+crates/pinyin-sys     bindgen FFI to libpinyin
+crates/pinyin         smart Pinyin engine (sentence prediction, Shuangpin, fuzzy pinyin)
 ```
 
 ## Install
@@ -80,7 +83,9 @@ Only one input method may hold the seat: stop IBus/Fcitx5 first (`ibus exit`,
 Open **Input Method Settings** from the app library (search "input method", "ime" or "倉頡"),
 or run `cosmic-ext-ime-settings`. Everything applies immediately — no restart:
 
-- Engine: libcangjie (Cangjie / Quick) or RIME
+- Engine: libcangjie (Cangjie / Quick), libpinyin (智能拼音) or RIME
+- Pinyin: 全拼 or a 双拼 scheme (自然码／微软／紫光／智能ABC／拼音加加／小鹤), fuzzy pinyin,
+  incomplete pinyin; Simplified output; the user dictionary learns as you type
 - RIME: pick any deployed schema; the list is published by the daemon once RIME starts
 - libcangjie: Mode (倉頡 / 速成), Cangjie 3 / 5, candidates per page, full-width characters
 - Character sets: Big5, HKSCS, all Chinese, Kanji, Hiragana, Katakana, Zhuyin,
@@ -141,8 +146,8 @@ be enabled in the settings app.
 ## Development
 
 ```sh
-sudo apt install libcangjie2-dev libsqlite3-dev librime-dev libxkbcommon-dev libclang-dev libwayland-dev
-cargo test --workspace     # engine tests hit the real libcangjie2 and rime-data
+sudo apt install libcangjie2-dev libsqlite3-dev librime-dev libpinyin15-dev libpinyin-data libglib2.0-dev libxkbcommon-dev libclang-dev libwayland-dev
+cargo test --workspace     # engine tests hit the real libcangjie2, rime-data and libpinyin data
 RUST_LOG=debug cargo run --release -p cosmic-ext-ime
 ```
 

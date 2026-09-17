@@ -20,15 +20,54 @@ pub enum Engine {
     Cangjie,
     /// librime: any RIME schema (Cangjie, Quick, Jyutping, Pinyin, ...).
     Rime,
+    /// libpinyin: smart Pinyin / Shuangpin with sentence prediction.
+    Pinyin,
 }
 
 impl Engine {
-    pub const ALL: [Engine; 2] = [Engine::Cangjie, Engine::Rime];
+    pub const ALL: [Engine; 3] = [Engine::Cangjie, Engine::Rime, Engine::Pinyin];
 
     pub fn label(self) -> &'static str {
         match self {
             Engine::Cangjie => "倉頡／速成 (libcangjie)",
             Engine::Rime => "RIME 中州韻",
+            Engine::Pinyin => "智能拼音 (libpinyin)",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum PinyinScheme {
+    #[default]
+    Full,
+    DoubleZrm,
+    DoubleMs,
+    DoubleZiguang,
+    DoubleAbc,
+    DoublePyjj,
+    DoubleXhe,
+}
+
+impl PinyinScheme {
+    pub const ALL: [PinyinScheme; 7] = [
+        PinyinScheme::Full,
+        PinyinScheme::DoubleZrm,
+        PinyinScheme::DoubleMs,
+        PinyinScheme::DoubleZiguang,
+        PinyinScheme::DoubleAbc,
+        PinyinScheme::DoublePyjj,
+        PinyinScheme::DoubleXhe,
+    ];
+
+    pub fn label(self) -> &'static str {
+        match self {
+            PinyinScheme::Full => "全拼",
+            PinyinScheme::DoubleZrm => "双拼 · 自然码",
+            PinyinScheme::DoubleMs => "双拼 · 微软",
+            PinyinScheme::DoubleZiguang => "双拼 · 紫光",
+            PinyinScheme::DoubleAbc => "双拼 · 智能ABC",
+            PinyinScheme::DoublePyjj => "双拼 · 拼音加加",
+            PinyinScheme::DoubleXhe => "双拼 · 小鹤",
         }
     }
 }
@@ -133,6 +172,11 @@ pub struct PopeinputConfig {
     pub engine: Engine,
     /// RIME schema id (e.g. "cangjie5"); empty means RIME's own default.
     pub rime_schema: String,
+    pub pinyin_scheme: PinyinScheme,
+    /// Fuzzy pinyin: z/zh, c/ch, s/sh, n/l, an/ang, en/eng, in/ing, ...
+    pub pinyin_fuzzy: bool,
+    /// Accept incomplete syllables (initials), e.g. "nh" for 你好.
+    pub pinyin_incomplete: bool,
     pub mode: Mode,
     pub cangjie_version: CangjieVersion,
     pub char_sets: Vec<CharSet>,
@@ -155,6 +199,9 @@ impl Default for PopeinputConfig {
         PopeinputConfig {
             engine: Engine::Cangjie,
             rime_schema: String::new(),
+            pinyin_scheme: PinyinScheme::Full,
+            pinyin_fuzzy: true,
+            pinyin_incomplete: true,
             mode: Mode::Cangjie,
             cangjie_version: CangjieVersion::V5,
             char_sets: vec![CharSet::Big5, CharSet::Hkscs],
@@ -211,6 +258,9 @@ impl PopeinputConfig {
         (
             self.engine,
             self.rime_schema.clone(),
+            self.pinyin_scheme,
+            self.pinyin_fuzzy,
+            self.pinyin_incomplete,
             self.mode,
             self.cangjie_version,
             self.char_sets.clone(),

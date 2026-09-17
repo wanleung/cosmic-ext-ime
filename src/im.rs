@@ -473,11 +473,12 @@ impl State {
         self.input_method.commit(self.done_serial);
 
         let candidates = self.engine.candidates();
-        if preedit.text.is_empty() && candidates.is_empty() {
+        let header = self.engine.header();
+        if header.is_empty() && candidates.is_empty() {
             self.popup.hide();
         } else {
             let (page, selected) = (self.engine.page_info(), self.engine.selected());
-            self.popup.show(&preedit.text, &candidates, page, selected);
+            self.popup.show(&header, &candidates, page, selected);
         }
     }
 

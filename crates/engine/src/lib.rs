@@ -121,4 +121,9 @@ pub trait InputEngine {
     fn is_composing(&self) -> bool {
         !self.preedit().text.is_empty()
     }
+
+    /// Text shown above the candidates in the popup; the preedit by default.
+    fn header(&self) -> String {
+        self.preedit().text
+    }
 }

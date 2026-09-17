@@ -1030,6 +1030,7 @@ dependencies = [
  "cosmic-ext-ime-cangjie",
  "cosmic-ext-ime-config",
  "cosmic-ext-ime-engine",
+ "cosmic-ext-ime-pinyin",
  "cosmic-ext-ime-rime",
  "cosmic-text 0.19.0",
  "cosmic-theme",
@@ -1063,6 +1064,15 @@ dependencies = [
 [[package]]
 name = "cosmic-ext-ime-engine"
 version = "0.1.1"
+
+[[package]]
+name = "cosmic-ext-ime-pinyin"
+version = "0.1.1"
+dependencies = [
+ "cosmic-ext-ime-engine",
+ "log",
+ "pinyin-sys",
+]
 
 [[package]]
 name = "cosmic-ext-ime-rime"
@@ -3798,6 +3808,14 @@ name = "pin-utils"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
+
+[[package]]
+name = "pinyin-sys"
+version = "0.1.1"
+dependencies = [
+ "bindgen",
+ "pkg-config",
+]
 
 [[package]]
 name = "piper"

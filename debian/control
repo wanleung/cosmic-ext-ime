@@ -11,6 +11,8 @@ Build-Depends:
     libclang-dev,
     libcangjie2-dev,
     librime-dev,
+    libpinyin15-dev,
+    libglib2.0-dev,
     libsqlite3-dev,
     libwayland-dev,
     libxkbcommon-dev,
@@ -27,14 +29,16 @@ Depends:
     libcangjie2-data,
     rime-prelude,
     rime-essay,
+    libpinyin-data,
     fonts-noto-cjk,
 Recommends:
     rime-data-cangjie5,
     rime-data-quick5,
     librime-data-jyutping,
-Description: Cangjie / Quick / RIME input method for the COSMIC desktop
+Description: Cangjie / Quick / Pinyin / RIME input method for the COSMIC desktop
  Native Wayland input method (zwp_input_method_v2) for COSMIC, made for
- Hong Kong users. Provides Cangjie and Quick (倉頡／速成) through libcangjie2
- and any RIME schema through librime, with a candidate popup that follows
- the COSMIC theme and a libcosmic settings app. Chinese input is toggled
- with COSMIC's own input-source switcher (Super+Space).
+ Hong Kong users. Provides Cangjie and Quick (倉頡／速成) through libcangjie2,
+ smart Pinyin and Shuangpin through libpinyin, and any RIME schema through
+ librime, with a candidate popup that follows the COSMIC theme and a
+ libcosmic settings app. Chinese input is toggled with COSMIC's own
+ input-source switcher (Super+Space).

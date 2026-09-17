@@ -1,14 +1,15 @@
 //! Settings window for cosmic-ext-ime. It only reads and writes the shared
 //! cosmic-config keys; the daemon watches them and applies changes live.
 
-use cosmic::app::{Core, Settings, Task};
+use cosmic::app::{context_drawer, Core, Settings, Task};
 use cosmic::cosmic_config::{self, Config};
 use cosmic::iced::{Length, Size};
+use cosmic::widget::about::About;
 use cosmic::widget::{self, settings};
-use cosmic::{executor, Application, Element};
+use cosmic::{executor, Application, ApplicationExt, Element};
 use cosmic_ext_ime_config::{
-    CangjieVersion, CharSet, Engine, Mode, PopeinputConfig, RimeState, APP_ID, CONFIG_VERSION,
-    STATE_VERSION,
+    CangjieVersion, CharSet, Engine, Mode, PinyinScheme, PopeinputConfig, RimeState, APP_ID,
+    CONFIG_VERSION, STATE_VERSION,
 };
 
 const SETTINGS_APP_ID: &str = "io.github.wanleung.CosmicExtIme.Settings";
@@ -22,6 +23,9 @@ fn main() -> cosmic::iced::Result {
 enum Message {
     Engine(usize),
     RimeSchema(usize),
+    PinyinScheme(usize),
+    PinyinFuzzy(bool),
+    PinyinIncomplete(bool),
     Mode(usize),
     Version(usize),
     PageSize(u32),
@@ -35,6 +39,8 @@ enum Message {
     RimeStateChanged(RimeState),
     RedeployRime,
     OpenRimeFolder,
+    ToggleAbout,
+    OpenUrl(String),
 }
 
 struct App {
@@ -44,10 +50,46 @@ struct App {
     cfg: PopeinputConfig,
     rime: RimeState,
     engine_labels: Vec<&'static str>,
+    pinyin_scheme_labels: Vec<&'static str>,
     mode_labels: Vec<&'static str>,
     version_labels: Vec<&'static str>,
     /// Index 0 is "RIME default"; the rest mirror `rime.schemas`.
     schema_labels: Vec<String>,
+    about: About,
+    show_about: bool,
+}
+
+fn about() -> About {
+    About::default()
+        .name("Input Method for COSMIC")
+        .icon(widget::icon::from_name("input-keyboard-symbolic"))
+        .version(env!("CARGO_PKG_VERSION"))
+        .author("Wan Leung Wong")
+        .copyright("© 2026 Wan Leung Wong")
+        .license("GPL-3.0-or-later")
+        .license_url("https://www.gnu.org/licenses/gpl-3.0.html")
+        .comments(
+            "cosmic-ext-ime — 倉頡、速成、拼音及 RIME 輸入法。\n\
+             A native Wayland input method for the COSMIC desktop, made for Hong Kong \
+             users and shared with the Hong Kong Linux User Group (HKLUG) community.\n\n\
+             Built on libcangjie (Project Cangjie), librime (RIME), libpinyin and libcosmic.",
+        )
+        .links([
+            ("Wan Leung Wong — wanleung.com", "https://wanleung.com"),
+            ("Repository", "https://github.com/wanleung/cosmic-ext-ime"),
+            (
+                "Report an issue",
+                "https://github.com/wanleung/cosmic-ext-ime/issues",
+            ),
+            ("Hong Kong Linux User Group", "https://www.linux.org.hk"),
+            (
+                "Project Cangjie (libcangjie)",
+                "https://cangjians.github.io",
+            ),
+            ("RIME (librime)", "https://rime.im"),
+            ("libpinyin", "https://github.com/libpinyin/libpinyin"),
+            ("libcosmic", "https://github.com/pop-os/libcosmic"),
+        ])
 }
 
 impl App {
@@ -112,9 +154,12 @@ impl Application for App {
             cfg,
             rime,
             engine_labels: Engine::ALL.iter().map(|e| e.label()).collect(),
+            pinyin_scheme_labels: PinyinScheme::ALL.iter().map(|s| s.label()).collect(),
             mode_labels: Mode::ALL.iter().map(|m| m.label()).collect(),
             version_labels: CangjieVersion::ALL.iter().map(|v| v.label()).collect(),
             schema_labels: Vec::new(),
+            about: about(),
+            show_about: false,
         };
         app.rebuild_schema_labels();
         (app, Task::none())
@@ -122,6 +167,31 @@ impl Application for App {
 
     fn header_start(&self) -> Vec<Element<'_, Message>> {
         vec![widget::text::title3("輸入法設定 Input Method Settings").into()]
+    }
+
+    fn header_end(&self) -> Vec<Element<'_, Message>> {
+        vec![
+            widget::button::icon(widget::icon::from_name("help-about-symbolic"))
+                .on_press(Message::ToggleAbout)
+                .into(),
+        ]
+    }
+
+    fn context_drawer(&self) -> Option<context_drawer::ContextDrawer<'_, Message>> {
+        self.show_about.then(|| {
+            context_drawer::about(
+                &self.about,
+                |url| Message::OpenUrl(url.to_owned()),
+                Message::ToggleAbout,
+            )
+        })
+    }
+
+    fn on_context_drawer(&mut self) -> Task<Message> {
+        if !self.core.window.show_context {
+            self.show_about = false;
+        }
+        Task::none()
     }
 
     fn subscription(&self) -> cosmic::iced::Subscription<Message> {
@@ -159,6 +229,12 @@ impl Application for App {
                 };
                 self.write(|c, h| c.set_rime_schema(h, id));
             }
+            Message::PinyinScheme(i) => {
+                let scheme = PinyinScheme::ALL[i.min(PinyinScheme::ALL.len() - 1)];
+                self.write(|c, h| c.set_pinyin_scheme(h, scheme));
+            }
+            Message::PinyinFuzzy(b) => self.write(|c, h| c.set_pinyin_fuzzy(h, b)),
+            Message::PinyinIncomplete(b) => self.write(|c, h| c.set_pinyin_incomplete(h, b)),
             Message::RimeStateChanged(state) => {
                 self.rime = state;
                 self.rebuild_schema_labels();
@@ -175,6 +251,15 @@ impl Application for App {
                     {
                         log::error!("requesting RIME redeploy: {e}");
                     }
+                }
+            }
+            Message::ToggleAbout => {
+                self.show_about = !self.show_about;
+                self.set_show_context(self.show_about);
+            }
+            Message::OpenUrl(url) => {
+                if let Err(e) = std::process::Command::new("xdg-open").arg(&url).spawn() {
+                    log::error!("opening {url}: {e}");
                 }
             }
             Message::OpenRimeFolder => {
@@ -220,6 +305,35 @@ impl Application for App {
             .iter()
             .position(|v| *v == cfg.cangjie_version);
         let is_rime = cfg.engine == Engine::Rime;
+        let is_pinyin = cfg.engine == Engine::Pinyin;
+        let is_cangjie = cfg.engine == Engine::Cangjie;
+
+        let pinyin_idx = PinyinScheme::ALL
+            .iter()
+            .position(|s| *s == cfg.pinyin_scheme);
+        let pinyin = settings::section()
+            .title("拼音 Pinyin (libpinyin)")
+            .add(settings::item(
+                "方案 Scheme",
+                widget::dropdown(
+                    &self.pinyin_scheme_labels,
+                    pinyin_idx,
+                    Message::PinyinScheme,
+                ),
+            ))
+            .add(
+                settings::item::builder("模糊音 Fuzzy pinyin")
+                    .description("z/zh, c/ch, s/sh, n/l, f/h, an/ang, en/eng, in/ing …")
+                    .toggler(cfg.pinyin_fuzzy, Message::PinyinFuzzy),
+            )
+            .add(
+                settings::item::builder("简拼 Incomplete pinyin")
+                    .description("Type initials only, e.g. nh → 你好")
+                    .toggler(cfg.pinyin_incomplete, Message::PinyinIncomplete),
+            )
+            .add(widget::text::caption(
+                "Simplified Chinese output. The user dictionary learns from what you commit.",
+            ));
 
         let engine = settings::section()
             .title("輸入引擎 Engine")
@@ -283,7 +397,10 @@ impl Application for App {
             .add(settings::item(
                 "倉頡版本 Cangjie version",
                 widget::dropdown(&self.version_labels, version_idx, Message::Version),
-            ))
+            ));
+
+        let general = settings::section()
+            .title("候選字 Candidates")
             .add(settings::item(
                 "每頁候選字數 Candidates per page",
                 widget::spin_button(
@@ -351,14 +468,16 @@ impl Application for App {
 
         let note = widget::text::caption("Changes apply immediately — no restart needed.");
 
-        let content = widget::column::with_capacity(7)
+        let content = widget::column::with_capacity(9)
             .spacing(24)
             .padding([0, 24, 24, 24])
             .push(note)
             .push(engine)
             .push_maybe(is_rime.then_some(rime))
-            .push_maybe((!is_rime).then_some(input))
-            .push_maybe((!is_rime).then_some(sets))
+            .push_maybe(is_pinyin.then_some(pinyin))
+            .push_maybe(is_cangjie.then_some(input))
+            .push_maybe(is_cangjie.then_some(sets))
+            .push(general)
             .push(switching)
             .push(popup);
 

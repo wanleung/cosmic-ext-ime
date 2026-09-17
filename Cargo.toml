@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/engine", "crates/cangjie-sys", "crates/cangjie", "crates/rime-sys", "crates/rime", "crates/config", "settings"]
+members = ["crates/engine", "crates/cangjie-sys", "crates/cangjie", "crates/rime-sys", "crates/rime", "crates/pinyin-sys", "crates/pinyin", "crates/config", "settings"]
 
 [workspace.dependencies]
 # Newest libcosmic revision that still builds with rustc 1.91, the latest toolchain
@@ -28,6 +28,7 @@ description = "Native Wayland (zwp_input_method_v2) Chinese input method for COS
 cosmic-ext-ime-engine = { path = "crates/engine" }
 cosmic-ext-ime-cangjie = { path = "crates/cangjie" }
 cosmic-ext-ime-rime = { path = "crates/rime" }
+cosmic-ext-ime-pinyin = { path = "crates/pinyin" }
 cosmic-ext-ime-config = { path = "crates/config" }
 cosmic-config = { workspace = true, features = ["calloop"] }
 cosmic-theme = { workspace = true }

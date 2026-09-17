@@ -1,0 +1,12 @@
+[package]
+name = "cosmic-ext-ime-pinyin"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Smart Pinyin engine for cosmic-ext-ime, backed by libpinyin"
+
+[dependencies]
+cosmic-ext-ime-engine = { path = "../engine" }
+pinyin-sys = { path = "../pinyin-sys" }
+log = "0.4"
