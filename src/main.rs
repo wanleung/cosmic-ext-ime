@@ -20,7 +20,34 @@ use wayland_protocols_misc::zwp_virtual_keyboard_v1::client::zwp_virtual_keyboar
 use crate::im::State;
 
 fn main() -> Result<()> {
+    match std::env::args().nth(1).as_deref() {
+        Some("--version" | "-V") => {
+            println!("cosmic-ext-ime {}", env!("CARGO_PKG_VERSION"));
+            return Ok(());
+        }
+        Some("--help" | "-h") => {
+            println!(
+                "cosmic-ext-ime {}\nInput method daemon for COSMIC; started by the session. \
+                 Configure with cosmic-ext-ime-settings. Set RUST_LOG=debug for verbose logs.",
+                env!("CARGO_PKG_VERSION")
+            );
+            return Ok(());
+        }
+        Some(other) => anyhow::bail!("unknown argument {other:?}"),
+        None => {}
+    }
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
+
+    // cosmic-comp happily activates a second input method, so guard against
+    // two daemons fighting over the keyboard (e.g. a hand-started copy next
+    // to the autostarted one).
+    let _lock = match single_instance_lock() {
+        Ok(lock) => lock,
+        Err(e) => {
+            log::error!("{e:#}");
+            return Ok(());
+        }
+    };
 
     warn_about_im_modules();
 
@@ -132,4 +159,26 @@ fn warn_about_im_modules() {
             }
         }
     }
+}
+
+fn single_instance_lock() -> Result<std::fs::File> {
+    let dir = std::env::var_os("XDG_RUNTIME_DIR")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(std::env::temp_dir);
+    let path = dir.join("cosmic-ext-ime.lock");
+    let file = std::fs::OpenOptions::new()
+        .create(true)
+        .truncate(false)
+        .write(true)
+        .open(&path)
+        .with_context(|| format!("opening {}", path.display()))?;
+    rustix::fs::flock(&file, rustix::fs::FlockOperation::NonBlockingLockExclusive).map_err(
+        |_| {
+            anyhow::anyhow!(
+                "another cosmic-ext-ime is already running (lock {})",
+                path.display()
+            )
+        },
+    )?;
+    Ok(file)
 }
