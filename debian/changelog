@@ -1,3 +1,9 @@
+cosmic-ext-ime (0.2.1) noble; urgency=medium
+
+  * Refuse to start a second daemon instance; handle --version/--help
+
+ -- Wan Leung Wong <me@wanleung.com>  Thu, 17 Sep 2026 22:23:37 +0100
+
 cosmic-ext-ime (0.2.0) noble; urgency=medium
 
   * Add smart Pinyin (libpinyin) engine and an About drawer in settings
