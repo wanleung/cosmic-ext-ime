@@ -1,3 +1,9 @@
+cosmic-ext-ime (0.2.0) noble; urgency=medium
+
+  * Add smart Pinyin (libpinyin) engine and an About drawer in settings
+
+ -- Wan Leung Wong <me@wanleung.com>  Thu, 17 Sep 2026 21:18:36 +0100
+
 cosmic-ext-ime (0.1.1) noble; urgency=medium
 
   * Build with rustc 1.91 so the package builds on Launchpad (noble).

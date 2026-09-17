@@ -733,7 +733,7 @@ dependencies = [
 
 [[package]]
 name = "cangjie-sys"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "bindgen",
  "pkg-config",
@@ -1021,7 +1021,7 @@ dependencies = [
 
 [[package]]
 name = "cosmic-ext-ime"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "calloop",
@@ -1046,7 +1046,7 @@ dependencies = [
 
 [[package]]
 name = "cosmic-ext-ime-cangjie"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "cangjie-sys",
  "cosmic-ext-ime-engine",
@@ -1055,7 +1055,7 @@ dependencies = [
 
 [[package]]
 name = "cosmic-ext-ime-config"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "cosmic-config",
  "serde",
@@ -1063,11 +1063,11 @@ dependencies = [
 
 [[package]]
 name = "cosmic-ext-ime-engine"
-version = "0.1.1"
+version = "0.2.0"
 
 [[package]]
 name = "cosmic-ext-ime-pinyin"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "cosmic-ext-ime-engine",
  "log",
@@ -1076,7 +1076,7 @@ dependencies = [
 
 [[package]]
 name = "cosmic-ext-ime-rime"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "cosmic-ext-ime-engine",
  "log",
@@ -1085,7 +1085,7 @@ dependencies = [
 
 [[package]]
 name = "cosmic-ext-ime-settings"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "cosmic-ext-ime-config",
  "env_logger",
@@ -3811,7 +3811,7 @@ checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
 
 [[package]]
 name = "pinyin-sys"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "bindgen",
  "pkg-config",
@@ -4231,7 +4231,7 @@ dependencies = [
 
 [[package]]
 name = "rime-sys"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "bindgen",
  "pkg-config",
