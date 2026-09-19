@@ -1,6 +1,6 @@
 # cosmic-ext-ime — COSMIC 輸入法
 
-[English](README.md)
+[English](README.md) ・ [繁體中文（台灣）](README.zh-TW.md) ・ [简体中文](README.zh-CN.md)
 
 為 [COSMIC](https://system76.com/cosmic) 桌面（Pop!_OS）而設的原生 Wayland 輸入法，
 以香港用家為本：用 [libcangjie2](https://cangjians.github.io/projects/libcangjie/)

@@ -1,6 +1,6 @@
 # cosmic-ext-ime — Input Method for COSMIC
 
-[繁體中文說明](README.zh-HK.md)
+[繁體中文（香港）](README.zh-HK.md) ・ [繁體中文（台灣）](README.zh-TW.md) ・ [简体中文](README.zh-CN.md)
 
 Native Wayland input method for the [COSMIC](https://system76.com/cosmic) desktop
 (Pop!_OS), made for Hong Kong users: **Cangjie (倉頡)** and **Quick (速成)** via
