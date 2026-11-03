@@ -20,6 +20,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             pkg-config libclang-dev libcangjie2-dev libcangjie2-data libsqlite3-dev \
+            libchewing3-dev libchewing3-data \
             librime-dev librime-data rime-data-cangjie5 libpinyin15-dev libpinyin-data libglib2.0-dev libxkbcommon-dev libwayland-dev
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -42,7 +43,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             debhelper devscripts just pkg-config libclang-dev libcangjie2-dev \
-            libsqlite3-dev librime-dev libpinyin15-dev libglib2.0-dev libxkbcommon-dev libwayland-dev lintian
+            libchewing3-dev libsqlite3-dev librime-dev libpinyin15-dev libglib2.0-dev libxkbcommon-dev libwayland-dev lintian
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Build package

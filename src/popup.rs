@@ -99,6 +99,8 @@ pub struct Popup<S: 'static> {
     font_system: FontSystem,
     swash_cache: SwashCache,
     style: Style,
+    /// Candidates in one row (ibus-chewing's horizontal lookup table).
+    horizontal: bool,
     scale: f32,
     visible: bool,
     /// Show a "no match" line under the radicals (engine rang the bell).
@@ -147,6 +149,7 @@ where
             font_system,
             swash_cache: SwashCache::new(),
             style,
+            horizontal: false,
             scale: 1.0,
             visible: false,
             error: false,
@@ -161,6 +164,13 @@ where
     pub fn set_style(&mut self, style: Style) {
         if self.style != style {
             self.style = style;
+            self.redraw();
+        }
+    }
+
+    pub fn set_horizontal(&mut self, horizontal: bool) {
+        if self.horizontal != horizontal {
+            self.horizontal = horizontal;
             self.redraw();
         }
     }
@@ -223,24 +233,37 @@ where
                 base.clone().color(self.style.error.text_color()),
             ));
         }
+        // One per line ("1. 你"), or in one row under the header like
+        // ibus-chewing's horizontal lookup table ("1.你   2.妳   …   1/3").
+        let (first_lead, sep, number_gap) = if self.horizontal {
+            let first = if header.is_empty() && !error {
+                ""
+            } else {
+                "\n"
+            };
+            (first, "   ", "")
+        } else {
+            ("\n", "\n", " ")
+        };
         for (i, c) in candidates.iter().enumerate() {
             let color = if i == selected && candidates.len() > 1 {
                 highlight
             } else {
                 fg
             };
+            let lead = if i == 0 { first_lead } else { sep };
             spans.push((
-                format!("\n{}. {}", i + 1, c.text),
+                format!("{lead}{}.{number_gap}{}", i + 1, c.text),
                 base.clone().color(color),
             ));
             if let Some(h) = &c.hint {
-                spans.push((format!("  {h}"), base.clone().color(hint)));
+                spans.push((format!(" {h}"), base.clone().color(hint)));
             }
         }
         let paging = match page.total_pages {
-            Some(total) if total > 1 => Some(format!("\n{}/{}", page.page + 1, total)),
+            Some(total) if total > 1 => Some(format!("{sep}{}/{}", page.page + 1, total)),
             None if page.page > 0 || page.has_next => Some(format!(
-                "\n{}{}{}",
+                "{sep}{}{}{}",
                 if page.page > 0 { "◂ " } else { "" },
                 page.page + 1,
                 if page.has_next { " ▸" } else { "" }

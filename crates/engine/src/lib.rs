@@ -33,6 +33,15 @@ pub enum Key {
     Right,
     PageUp,
     PageDown,
+    Delete,
+    Home,
+    End,
+    CapsLock,
+    /// Keypad digit 0-9.  Unlike the top-row digits these never start a
+    /// syllable; ibus-chewing processes them in temporary English mode.
+    KeypadDigit(u8),
+    /// Keypad operators: `*` `+` `,` `-` `.` `/`.
+    KeypadSymbol(char),
     /// Shift, Ctrl, Alt, Super and friends.
     Modifier(ModifierKey),
     Other,
@@ -103,6 +112,15 @@ pub trait InputEngine {
     /// Key release; most engines ignore these, RIME uses them for toggles.
     fn release_key(&mut self, _input: KeyInput) -> Response {
         Response::Ignored
+    }
+
+    /// Put the engine in its English (`true`) or Chinese (`false`) sub-mode
+    /// without a key.  The frontend resets to Chinese on a switch to the
+    /// Chinese input source and on every focus into a text field.  Returns
+    /// `true` when the mode changed (the visible state may have changed with
+    /// it).
+    fn set_english_mode(&mut self, _english: bool) -> bool {
+        false
     }
 
     fn preedit(&self) -> Preedit;

@@ -1,6 +1,8 @@
 mod config;
+mod dispatch;
 mod im;
 mod keys;
+mod layout;
 mod popup;
 
 use anyhow::{Context, Result};

@@ -5,8 +5,10 @@
 Native Wayland input method for the [COSMIC](https://system76.com/cosmic) desktop
 (Pop!_OS), made for Hong Kong users: **Cangjie (倉頡)** and **Quick (速成)** via
 [libcangjie2](https://cangjians.github.io/projects/libcangjie/), smart Pinyin /
-Shuangpin via [libpinyin](https://github.com/libpinyin/libpinyin), or any
-[RIME](https://rime.im/) schema via librime (Cangjie, Quick, Jyutping, Pinyin, …).
+Shuangpin via [libpinyin](https://github.com/libpinyin/libpinyin), Traditional
+Chinese Zhuyin (新酷音) via [libchewing](https://github.com/chewing/libchewing),
+or any [RIME](https://rime.im/) schema via librime (Cangjie, Quick, Jyutping,
+Pinyin, …).
 
 <p>
   <img src="data/screenshot-cangjie.png" alt="Cangjie candidates" height="360">
@@ -78,6 +80,19 @@ and let the language model segment it:
 | Space | commit the predicted sentence |
 | `1`–`9` | pick one word and keep composing the rest |
 | Backspace | undo the last word choice, then delete letters |
+
+Chewing (新酷音) uses libchewing's Zhuyin state machine. The default keyboard is
+standard Dachen (大千式); other layouts are selectable in settings. If
+`~/.chewing/chewing.sqlite3` exists, its user dictionary is reused automatically.
+
+| Key | Action |
+| --- | --- |
+| Zhuyin keys | type a syllable; the preedit shows the composed text |
+| `1`–`9` | pick a candidate; the chosen text is committed |
+| Space | first tone while composing; page down when candidates are open |
+| Enter | accept/commit the current preedit |
+| Backspace / Escape | delete the last symbol / cancel the composition |
+| Page Up/Down, ↑/↓ | page through candidates |
 | punctuation | commit the sentence, then the full-width mark |
 
 Each commit trains the user dictionary, so frequent phrases rise to the top.
@@ -87,7 +102,8 @@ Each commit trains the user dictionary, so frequent phrases rise to the top.
 Open **Input Method Settings** from the app library (search "input method", "ime" or "倉頡"),
 or run `cosmic-ext-ime-settings`. Everything applies immediately — no restart:
 
-- Engine: libcangjie (Cangjie / Quick), libpinyin (智能拼音) or RIME
+- Engine: libcangjie (Cangjie / Quick), libpinyin (智能拼音), libchewing (新酷音)
+  or RIME
 - libcangjie: mode (倉頡 / 速成), Cangjie 3 / 5, and character sets — Big5, HKSCS,
   all Chinese, Kanji, Hiragana, Katakana, Zhuyin, punctuation, symbols
   (kana are typed as `zj` + romaji, e.g. `zja` → あ)
@@ -161,6 +177,9 @@ crates/config         settings schema stored via cosmic-config (the daemon/UI co
 crates/engine         InputEngine trait + shared types (no Wayland, no FFI)
 crates/cangjie-sys    bindgen FFI to libcangjie2
 crates/cangjie        safe wrapper + Cangjie/Quick engine (tested against the real DB)
+crates/chewing-sys    bindgen FFI to libchewing
+crates/chewing        cosmic-ext-ime-chewing Cargo package (新酷音 Zhuyin engine)
+tools/                vktap + improbe: drive the live compositor and watch what an application receives (docs/compositor-notes.md)
 crates/rime-sys       bindgen FFI to librime's C API
 crates/rime           RIME engine: one librime session per engine, schemas from rime-data
 crates/pinyin-sys     bindgen FFI to libpinyin
@@ -170,8 +189,8 @@ crates/pinyin         smart Pinyin engine (sentence prediction, Shuangpin, fuzzy
 ## Development
 
 ```sh
-sudo apt install libcangjie2-dev libsqlite3-dev librime-dev libpinyin15-dev libpinyin-data libglib2.0-dev libxkbcommon-dev libclang-dev libwayland-dev
-cargo test --workspace     # engine tests hit the real libcangjie2, rime-data and libpinyin data
+sudo apt install libcangjie2-dev libchewing3-dev libsqlite3-dev librime-dev libpinyin15-dev libpinyin-data libglib2.0-dev libxkbcommon-dev libclang-dev libwayland-dev
+cargo test --workspace     # engine tests hit the real libcangjie2, libchewing, rime-data and libpinyin data
 RUST_LOG=debug cargo run --release -p cosmic-ext-ime
 ```
 
@@ -191,6 +210,7 @@ check `cargo +1.91.1 build` before bumping it.
 - [x] HiDPI / fractional scaling for the popup; follows the COSMIC theme
 - [x] librime engine
 - [x] libpinyin engine (smart Pinyin / Shuangpin)
+- [x] libchewing engine (Traditional Chinese Zhuyin / 新酷音)
 - [x] Debian packaging (`just deb`) and a PPA
 - [ ] Traditional Chinese output for libpinyin (OpenCC)
 - [ ] Integration in COSMIC Settings → Keyboard (upstream)
@@ -198,5 +218,6 @@ check `cargo +1.91.1 build` before bumping it.
 ## License
 
 GPL-3.0-or-later (see `LICENSE`). The FFI binding crates follow the libraries
-they wrap: `crates/cangjie-sys` is LGPL-3.0-or-later, `crates/rime-sys` is
-BSD-3-Clause and `crates/pinyin-sys` is GPL-2.0-or-later.
+they wrap: `crates/cangjie-sys` is LGPL-3.0-or-later, `crates/chewing-sys` is
+LGPL-2.1-or-later, `crates/rime-sys` is BSD-3-Clause and `crates/pinyin-sys` is
+GPL-2.0-or-later.

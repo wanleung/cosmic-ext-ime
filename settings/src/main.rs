@@ -8,8 +8,8 @@ use cosmic::widget::about::About;
 use cosmic::widget::{self, settings};
 use cosmic::{executor, Application, ApplicationExt, Element};
 use cosmic_ext_ime_config::{
-    CangjieVersion, CharSet, Engine, Mode, PinyinScheme, PopeinputConfig, RimeState, APP_ID,
-    CONFIG_VERSION, STATE_VERSION,
+    CangjieVersion, CharSet, ChewingKeyboard, Engine, Mode, PinyinScheme, PopeinputConfig,
+    RimeState, APP_ID, CONFIG_VERSION, STATE_VERSION,
 };
 
 const SETTINGS_APP_ID: &str = "io.github.wanleung.CosmicExtIme.Settings";
@@ -26,6 +26,18 @@ enum Message {
     PinyinScheme(usize),
     PinyinFuzzy(bool),
     PinyinIncomplete(bool),
+    ChewingKeyboard(usize),
+    ChewingSpaceAsSelection(bool),
+    ChewingAutoLearn(bool),
+    ChewingPageSize(u32),
+    ChewingSelectionKeys(String),
+    ChewingEasySymbol(bool),
+    ChewingAutoShift(bool),
+    ChewingAddPhraseDirection(bool),
+    ChewingPhraseChoiceFromLast(bool),
+    ChewingPlainZhuyin(bool),
+    ChewingEscCleanAll(bool),
+    ChewingMaxChiSymbolLen(u32),
     Mode(usize),
     Version(usize),
     PageSize(u32),
@@ -35,6 +47,7 @@ enum Message {
     CtrlSpace(bool),
     ShiftTap(bool),
     FontSize(u32),
+    PopupHorizontal(bool),
     Reloaded(PopeinputConfig),
     RimeStateChanged(RimeState),
     RedeployRime,
@@ -51,6 +64,7 @@ struct App {
     rime: RimeState,
     engine_labels: Vec<&'static str>,
     pinyin_scheme_labels: Vec<&'static str>,
+    chewing_keyboard_labels: Vec<&'static str>,
     mode_labels: Vec<&'static str>,
     version_labels: Vec<&'static str>,
     /// Index 0 is "RIME default"; the rest mirror `rime.schemas`.
@@ -72,7 +86,7 @@ fn about() -> About {
             "cosmic-ext-ime — 倉頡、速成、拼音及 RIME 輸入法。\n\
              A native Wayland input method for the COSMIC desktop, made for Hong Kong \
              users and shared with the Hong Kong Linux User Group (HKLUG) community.\n\n\
-             Built on libcangjie (Project Cangjie), librime (RIME), libpinyin and libcosmic.",
+             Built on libcangjie (Project Cangjie), librime (RIME), libpinyin, libchewing and libcosmic.",
         )
         .links([
             ("Wan Leung Wong — wanleung.com", "https://wanleung.com"),
@@ -88,6 +102,7 @@ fn about() -> About {
             ),
             ("RIME (librime)", "https://rime.im"),
             ("libpinyin", "https://github.com/libpinyin/libpinyin"),
+            ("libchewing", "https://github.com/chewing/libchewing"),
             ("libcosmic", "https://github.com/pop-os/libcosmic"),
         ])
 }
@@ -155,6 +170,7 @@ impl Application for App {
             rime,
             engine_labels: Engine::ALL.iter().map(|e| e.label()).collect(),
             pinyin_scheme_labels: PinyinScheme::ALL.iter().map(|s| s.label()).collect(),
+            chewing_keyboard_labels: ChewingKeyboard::ALL.iter().map(|k| k.label()).collect(),
             mode_labels: Mode::ALL.iter().map(|m| m.label()).collect(),
             version_labels: CangjieVersion::ALL.iter().map(|v| v.label()).collect(),
             schema_labels: Vec::new(),
@@ -235,6 +251,38 @@ impl Application for App {
             }
             Message::PinyinFuzzy(b) => self.write(|c, h| c.set_pinyin_fuzzy(h, b)),
             Message::PinyinIncomplete(b) => self.write(|c, h| c.set_pinyin_incomplete(h, b)),
+            Message::ChewingKeyboard(i) => {
+                let keyboard = ChewingKeyboard::ALL[i.min(ChewingKeyboard::ALL.len() - 1)];
+                self.write(|c, h| c.set_chewing_keyboard(h, keyboard));
+            }
+            Message::ChewingSpaceAsSelection(b) => {
+                self.write(|c, h| c.set_chewing_space_as_selection(h, b))
+            }
+            Message::ChewingAutoLearn(b) => self.write(|c, h| c.set_chewing_auto_learn(h, b)),
+            Message::ChewingPageSize(n) => {
+                self.write(|c, h| c.set_chewing_page_size(h, n.clamp(1, 10)))
+            }
+            Message::ChewingSelectionKeys(keys) => {
+                let keys: String = keys.chars().filter(|c| c.is_ascii()).take(10).collect();
+                self.write(|c, h| c.set_chewing_sel_keys(h, keys));
+            }
+            Message::ChewingEasySymbol(b) => {
+                self.write(|c, h| c.set_chewing_easy_symbol_input(h, b))
+            }
+            Message::ChewingAutoShift(b) => self.write(|c, h| c.set_chewing_auto_shift_cur(h, b)),
+            Message::ChewingAddPhraseDirection(b) => {
+                self.write(|c, h| c.set_chewing_add_phrase_direction(h, b))
+            }
+            Message::ChewingPhraseChoiceFromLast(b) => {
+                self.write(|c, h| c.set_chewing_phrase_choice_from_last(h, b))
+            }
+            Message::ChewingPlainZhuyin(b) => self.write(|c, h| c.set_chewing_plain_zhuyin(h, b)),
+            Message::ChewingEscCleanAll(b) => {
+                self.write(|c, h| c.set_chewing_esc_clean_all_buf(h, b))
+            }
+            Message::ChewingMaxChiSymbolLen(n) => {
+                self.write(|c, h| c.set_chewing_max_chi_symbol_len(h, n.clamp(1, 100)))
+            }
             Message::RimeStateChanged(state) => {
                 self.rime = state;
                 self.rebuild_schema_labels();
@@ -292,6 +340,7 @@ impl Application for App {
             Message::CtrlSpace(b) => self.write(|c, h| c.set_ctrl_space_toggle(h, b)),
             Message::ShiftTap(b) => self.write(|c, h| c.set_shift_tap_toggle(h, b)),
             Message::FontSize(n) => self.write(|c, h| c.set_popup_font_size(h, n.clamp(8, 48))),
+            Message::PopupHorizontal(b) => self.write(|c, h| c.set_popup_horizontal(h, b)),
             Message::Reloaded(cfg) => self.cfg = cfg,
         }
         Task::none()
@@ -307,10 +356,14 @@ impl Application for App {
         let is_rime = cfg.engine == Engine::Rime;
         let is_pinyin = cfg.engine == Engine::Pinyin;
         let is_cangjie = cfg.engine == Engine::Cangjie;
+        let is_chewing = cfg.engine == Engine::Chewing;
 
         let pinyin_idx = PinyinScheme::ALL
             .iter()
             .position(|s| *s == cfg.pinyin_scheme);
+        let chewing_keyboard_idx = ChewingKeyboard::ALL
+            .iter()
+            .position(|k| *k == cfg.chewing_keyboard);
         let pinyin = settings::section()
             .title("拼音 Pinyin (libpinyin)")
             .add(settings::item(
@@ -334,6 +387,98 @@ impl Application for App {
             .add(widget::text::caption(
                 "Simplified Chinese output. The user dictionary learns from what you commit.",
             ));
+
+        let chewing = settings::section()
+            .title("新酷音 Chewing (libchewing)")
+            .add(settings::item(
+                "鍵盤配置 Keyboard",
+                widget::dropdown(
+                    &self.chewing_keyboard_labels,
+                    chewing_keyboard_idx,
+                    Message::ChewingKeyboard,
+                ),
+            ))
+            .add(
+                settings::item::builder("空白鍵選字 Space selects candidate")
+                    .description("Use Space to choose the highlighted candidate instead of paging")
+                    .toggler(
+                        cfg.chewing_space_as_selection,
+                        Message::ChewingSpaceAsSelection,
+                    ),
+            )
+            .add(
+                settings::item::builder("自動學習 Auto-learn")
+                    .description("Learn new phrases into libchewing's user dictionary")
+                    .toggler(cfg.chewing_auto_learn, Message::ChewingAutoLearn),
+            )
+            .add(settings::item(
+                "每頁候選字數 Candidates per page",
+                widget::spin_button(
+                    cfg.chewing_page_size.to_string(),
+                    "Chewing candidates per page",
+                    cfg.chewing_page_size,
+                    1,
+                    1,
+                    10,
+                    Message::ChewingPageSize,
+                ),
+            ))
+            .add(settings::item(
+                "選字鍵 Selection keys",
+                widget::text_input("1234567890", &cfg.chewing_sel_keys)
+                    .on_input(Message::ChewingSelectionKeys),
+            ))
+            .add(settings::item(
+                "最大組字長度 Max symbols",
+                widget::spin_button(
+                    cfg.chewing_max_chi_symbol_len.to_string(),
+                    "maximum Chinese symbols",
+                    cfg.chewing_max_chi_symbol_len,
+                    1,
+                    1,
+                    100,
+                    Message::ChewingMaxChiSymbolLen,
+                ),
+            ))
+            .add(
+                settings::item::builder("簡易符號 Easy symbol input")
+                    .description("Map symbol keys the way ibus-chewing does")
+                    .toggler(cfg.chewing_easy_symbol_input, Message::ChewingEasySymbol),
+            )
+            .add(
+                settings::item::builder("選字後移動游標 Auto-shift cursor")
+                    .description("Move to the next phrase after selecting a candidate")
+                    .toggler(cfg.chewing_auto_shift_cur, Message::ChewingAutoShift),
+            )
+            .add(
+                settings::item::builder("向前加詞 Add phrase forward")
+                    .description("Add learned phrases in the forward direction")
+                    .toggler(
+                        cfg.chewing_add_phrase_direction,
+                        Message::ChewingAddPhraseDirection,
+                    ),
+            )
+            .add(
+                settings::item::builder("從後選詞 Phrase choice from last")
+                    .description("Prefer phrases behind the cursor")
+                    .toggler(
+                        cfg.chewing_phrase_choice_from_last,
+                        Message::ChewingPhraseChoiceFromLast,
+                    ),
+            )
+            .add(
+                settings::item::builder("傳統注音 Plain Zhuyin")
+                    .description(
+                        "Pick every character yourself: each syllable opens the candidate \
+                         list, a number key commits it; no automatic phrase conversion",
+                    )
+                    .toggler(cfg.chewing_plain_zhuyin, Message::ChewingPlainZhuyin),
+            )
+            .add(
+                settings::item::builder("Esc 清除全部 Escape clears all")
+                    .description("Escape clears the whole preedit buffer")
+                    .toggler(cfg.chewing_esc_clean_all_buf, Message::ChewingEscCleanAll),
+            );
 
         let engine = settings::section()
             .title("輸入引擎 Engine")
@@ -464,7 +609,12 @@ impl Application for App {
                     48,
                     Message::FontSize,
                 ),
-            ));
+            ))
+            .add(
+                settings::item::builder("橫排 Horizontal")
+                    .description("Candidates in one row instead of one per line")
+                    .toggler(cfg.popup_horizontal, Message::PopupHorizontal),
+            );
 
         let note = widget::text::caption("Changes apply immediately — no restart needed.");
 
@@ -475,6 +625,7 @@ impl Application for App {
             .push(engine)
             .push_maybe(is_rime.then_some(rime))
             .push_maybe(is_pinyin.then_some(pinyin))
+            .push_maybe(is_chewing.then_some(chewing))
             .push_maybe(is_cangjie.then_some(input))
             .push_maybe(is_cangjie.then_some(sets))
             .push(general)

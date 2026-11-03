@@ -388,6 +388,10 @@ fn to_rime_key(input: &KeyInput) -> (c_int, c_int) {
         Key::Down => 0xff54,
         Key::PageUp => 0xff55,
         Key::PageDown => 0xff56,
+        Key::Delete => 0xffff,
+        Key::Home => 0xff50,
+        Key::End => 0xff57,
+        Key::CapsLock => 0xffe5,
         Key::Modifier(m) => match m {
             ModifierKey::ShiftL => 0xffe1,
             ModifierKey::ShiftR => 0xffe2,
@@ -399,6 +403,8 @@ fn to_rime_key(input: &KeyInput) -> (c_int, c_int) {
             ModifierKey::SuperR => 0xffec,
             ModifierKey::Other => 0,
         },
+        Key::KeypadDigit(d) => 0xffb0 + d as u32, // XK_KP_0 .. XK_KP_9
+        Key::KeypadSymbol(c) => c as u32,
         Key::Other => 0,
     };
     let m = input.modifiers;

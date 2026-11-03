@@ -14,6 +14,10 @@ Files: crates/cangjie-sys/*
 Copyright: 2026 Wan Leung Wong
 License: LGPL-3.0-or-later
 
+Files: crates/chewing-sys/*
+Copyright: 2026 Wan Leung Wong
+License: LGPL-2.1-or-later
+
 Files: crates/pinyin-sys/*
 Copyright: 2026 Wan Leung Wong
 License: GPL-2.0-or-later
@@ -29,6 +33,10 @@ License: GPL-3.0-or-later
 License: LGPL-3.0-or-later
  On Debian systems the full text of the GNU Lesser General Public License
  version 3 can be found in /usr/share/common-licenses/LGPL-3.
+
+License: LGPL-2.1-or-later
+ On Debian systems the full text of the GNU Lesser General Public License
+ version 2.1 can be found in /usr/share/common-licenses/LGPL-2.1.
 
 License: BSD-3-Clause
  Redistribution and use in source and binary forms, with or without

@@ -1,3 +1,28 @@
+cosmic-ext-ime (0.2.1+chewing) noble; urgency=medium
+
+  * Add the Chewing (新酷音) Zhuyin engine on libchewing 0.6 with
+    ibus-chewing 2.0 behaviour: on-demand candidate window with selection
+    keys, paging and highlight navigation, editing keys, Ctrl+number user
+    phrases and symbol lists, keypad handling, easy symbols, full-width
+    punctuation, Caps Lock Chinese/English sub-mode, keyboard layouts
+    (standard, Hsu, IBM, Gin-Yieh, ETen, ETen 26, Dvorak, DaChen 26);
+    reuses an existing ibus-chewing user dictionary
+  * Plain Zhuyin (傳統注音) option: every syllable opens the candidate
+    list and a number key commits that character, no phrase conversion
+  * Candidate window: optional horizontal (one-row) layout
+  * Settings: Chewing section (keyboard, candidates per page, selection
+    keys, space selection, auto-learn, symbols, cursor and phrase options)
+  * Frontend: share the seat keymap with the virtual keyboard so
+    cosmic-comp no longer rebuilds its xkb state on every forwarded key
+    (input source and Caps Lock were lost mid-typing); drop the modifiers
+    echo; follow input sources from settled layout reports (TLA+-verified
+    policy); Caps Lock is a pure Chinese/English toggle while Chinese
+    input is on and the Chinese source always starts in Chinese mode
+  * Unit-tested frontend policies (key translation, dispatch, Shift tap,
+    layout) and headless compositor probe tools under tools/
+
+ -- Alan <alan@alanyho.com>  Mon, 02 Nov 2026 23:20:00 -0800
+
 cosmic-ext-ime (0.2.1) noble; urgency=medium
 
   * Refuse to start a second daemon instance; handle --version/--help

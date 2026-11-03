@@ -1,0 +1,11 @@
+[package]
+name = "improbe"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+wayland-client = "0.31"
+wayland-protocols = { version = "0.32", features = ["client", "unstable"] }
+xkbcommon = { version = "0.8", features = ["wayland"] }
+cosmic-text = "0.19"
+memmap2 = "0.9"

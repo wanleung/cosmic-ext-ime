@@ -22,16 +22,24 @@ pub enum Engine {
     Rime,
     /// libpinyin: smart Pinyin / Shuangpin with sentence prediction.
     Pinyin,
+    /// libchewing: Traditional Chinese Zhuyin (新酷音).
+    Chewing,
 }
 
 impl Engine {
-    pub const ALL: [Engine; 3] = [Engine::Cangjie, Engine::Rime, Engine::Pinyin];
+    pub const ALL: [Engine; 4] = [
+        Engine::Cangjie,
+        Engine::Rime,
+        Engine::Pinyin,
+        Engine::Chewing,
+    ];
 
     pub fn label(self) -> &'static str {
         match self {
             Engine::Cangjie => "倉頡／速成 (libcangjie)",
             Engine::Rime => "RIME 中州韻",
             Engine::Pinyin => "智能拼音 (libpinyin)",
+            Engine::Chewing => "新酷音 (libchewing)",
         }
     }
 }
@@ -86,6 +94,50 @@ impl Mode {
         match self {
             Mode::Cangjie => "倉頡 Cangjie",
             Mode::Quick => "速成 Quick",
+        }
+    }
+}
+
+/// Keyboard layouts understood by libchewing's `chewing_KBStr2Num()`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum ChewingKeyboard {
+    /// Standard Zhuyin (大千式).
+    #[default]
+    Default,
+    Hsu,
+    Ibm,
+    GinYieh,
+    Et,
+    Et26,
+    Dvorak,
+    DvorakHsu,
+    DachenCp26,
+}
+
+impl ChewingKeyboard {
+    pub const ALL: [ChewingKeyboard; 9] = [
+        ChewingKeyboard::Default,
+        ChewingKeyboard::Hsu,
+        ChewingKeyboard::Ibm,
+        ChewingKeyboard::GinYieh,
+        ChewingKeyboard::Et,
+        ChewingKeyboard::Et26,
+        ChewingKeyboard::Dvorak,
+        ChewingKeyboard::DvorakHsu,
+        ChewingKeyboard::DachenCp26,
+    ];
+
+    pub fn label(self) -> &'static str {
+        match self {
+            ChewingKeyboard::Default => "標準注音 (大千式)",
+            ChewingKeyboard::Hsu => "許氏注音 (Hsu)",
+            ChewingKeyboard::Ibm => "IBM 注音",
+            ChewingKeyboard::GinYieh => "精業注音 (Gin-Yieh)",
+            ChewingKeyboard::Et => "倚天注音 (ET)",
+            ChewingKeyboard::Et26 => "倚天 26 鍵 (ET26)",
+            ChewingKeyboard::Dvorak => "Dvorak 注音",
+            ChewingKeyboard::DvorakHsu => "Dvorak 許氏注音",
+            ChewingKeyboard::DachenCp26 => "大千 CP26",
         }
     }
 }
@@ -177,6 +229,30 @@ pub struct PopeinputConfig {
     pub pinyin_fuzzy: bool,
     /// Accept incomplete syllables (initials), e.g. "nh" for 你好.
     pub pinyin_incomplete: bool,
+    /// libchewing keyboard layout.
+    pub chewing_keyboard: ChewingKeyboard,
+    /// Let Space select the highlighted candidate instead of paging.
+    pub chewing_space_as_selection: bool,
+    /// Learn new phrases into libchewing's user dictionary.
+    pub chewing_auto_learn: bool,
+    /// Candidates per page for Chewing (libchewing supports 1–10).
+    pub chewing_page_size: u32,
+    /// Selection keys, in page order.  Default is "1234567890".
+    pub chewing_sel_keys: String,
+    /// ibus-chewing "easy symbol input" (Shift+letter symbols).
+    pub chewing_easy_symbol_input: bool,
+    /// Move the cursor after selecting a candidate.
+    pub chewing_auto_shift_cur: bool,
+    /// Add learned phrases in the forward direction.
+    pub chewing_add_phrase_direction: bool,
+    /// Prefer phrases behind the cursor.
+    pub chewing_phrase_choice_from_last: bool,
+    /// Escape clears the whole preedit buffer.
+    pub chewing_esc_clean_all_buf: bool,
+    /// Plain Zhuyin: pick every character yourself, no phrase conversion.
+    pub chewing_plain_zhuyin: bool,
+    /// Maximum number of Chinese symbols in one composition.
+    pub chewing_max_chi_symbol_len: u32,
     pub mode: Mode,
     pub cangjie_version: CangjieVersion,
     pub char_sets: Vec<CharSet>,
@@ -192,6 +268,9 @@ pub struct PopeinputConfig {
     pub ctrl_space_toggle: bool,
     pub shift_tap_toggle: bool,
     pub popup_font_size: u32,
+    /// Lay the candidates out in one row (ibus-chewing's horizontal lookup
+    /// table) instead of one per line.
+    pub popup_horizontal: bool,
 }
 
 impl Default for PopeinputConfig {
@@ -202,11 +281,25 @@ impl Default for PopeinputConfig {
             pinyin_scheme: PinyinScheme::Full,
             pinyin_fuzzy: true,
             pinyin_incomplete: true,
+            chewing_keyboard: ChewingKeyboard::Default,
+            chewing_space_as_selection: true,
+            chewing_auto_learn: true,
+            chewing_page_size: 10,
+            chewing_sel_keys: "1234567890".into(),
+            chewing_easy_symbol_input: true,
+            chewing_auto_shift_cur: true,
+            chewing_add_phrase_direction: true,
+            chewing_phrase_choice_from_last: true,
+            chewing_esc_clean_all_buf: false,
+            chewing_plain_zhuyin: false,
+            chewing_max_chi_symbol_len: 20,
             mode: Mode::Cangjie,
             cangjie_version: CangjieVersion::V5,
             char_sets: vec![CharSet::Big5, CharSet::Hkscs],
             page_size: 9,
-            fullwidth_chars: true,
+            // ibus-chewing starts in half shape; full-width punctuation and
+            // easy symbols do not depend on this (see the Chewing engine).
+            fullwidth_chars: false,
             follow_layout: true,
             chinese_layouts: vec![
                 "chinese".into(),
@@ -217,6 +310,7 @@ impl Default for PopeinputConfig {
             ctrl_space_toggle: false,
             shift_tap_toggle: false,
             popup_font_size: 18,
+            popup_horizontal: false,
         }
     }
 }
@@ -261,6 +355,20 @@ impl PopeinputConfig {
             self.pinyin_scheme,
             self.pinyin_fuzzy,
             self.pinyin_incomplete,
+            (
+                self.chewing_keyboard,
+                self.chewing_space_as_selection,
+                self.chewing_auto_learn,
+                self.chewing_page_size,
+                self.chewing_sel_keys.clone(),
+                self.chewing_easy_symbol_input,
+                self.chewing_auto_shift_cur,
+                self.chewing_add_phrase_direction,
+                self.chewing_phrase_choice_from_last,
+                self.chewing_esc_clean_all_buf,
+                self.chewing_plain_zhuyin,
+                self.chewing_max_chi_symbol_len,
+            ),
             self.mode,
             self.cangjie_version,
             self.char_sets.clone(),

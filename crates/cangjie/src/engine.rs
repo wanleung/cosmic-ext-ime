@@ -357,9 +357,18 @@ impl InputEngine for CangjieEngine {
             }
             Key::Char(c) if self.is_input_key(c) => self.input_char(c),
             Key::Char(c) => self.other_key(c),
-            Key::Enter | Key::Tab | Key::Left | Key::Right | Key::Modifier(_) | Key::Other => {
-                Response::Ignored
-            }
+            Key::Delete
+            | Key::Home
+            | Key::End
+            | Key::CapsLock
+            | Key::Enter
+            | Key::Tab
+            | Key::Left
+            | Key::Right
+            | Key::KeypadDigit(_)
+            | Key::KeypadSymbol(_)
+            | Key::Modifier(_)
+            | Key::Other => Response::Ignored,
         }
     }
 

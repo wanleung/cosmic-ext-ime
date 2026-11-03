@@ -10,6 +10,7 @@ Build-Depends:
     rustc-1.91 | rustc (>= 1.88),
     libclang-dev,
     libcangjie2-dev,
+    libchewing3-dev,
     librime-dev,
     libpinyin15-dev,
     libglib2.0-dev,
@@ -27,6 +28,8 @@ Depends:
     ${shlibs:Depends},
     libwayland-client0,
     libcangjie2-data,
+    libchewing3,
+    libchewing3-data,
     rime-prelude,
     rime-essay,
     libpinyin-data,
@@ -35,10 +38,10 @@ Recommends:
     rime-data-cangjie5,
     rime-data-quick5,
     librime-data-jyutping,
-Description: Cangjie / Quick / Pinyin / RIME input method for the COSMIC desktop
+Description: Cangjie / Quick / Pinyin / Chewing / RIME input method for the COSMIC desktop
  Native Wayland input method (zwp_input_method_v2) for COSMIC, made for
  Hong Kong users. Provides Cangjie and Quick (倉頡／速成) through libcangjie2,
- smart Pinyin and Shuangpin through libpinyin, and any RIME schema through
- librime, with a candidate popup that follows the COSMIC theme and a
- libcosmic settings app. Chinese input is toggled with COSMIC's own
- input-source switcher (Super+Space).
+ smart Pinyin and Shuangpin through libpinyin, Traditional Chinese Zhuyin
+ (新酷音) through libchewing, and any RIME schema through librime, with a
+ candidate popup that follows the COSMIC theme and a libcosmic settings app.
+ Chinese input is toggled with COSMIC's own input-source switcher (Super+Space).

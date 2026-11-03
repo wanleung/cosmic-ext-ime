@@ -36,6 +36,9 @@ use xkbcommon::xkb;
 
 use cosmic_ext_ime_config::PopeinputConfig;
 
+use crate::dispatch::{disposition, Action, ShiftTap};
+use crate::layout::LayoutPolicy;
+
 use crate::config::build_engine;
 use crate::keys;
 use crate::popup::{Popup, Style};
@@ -58,6 +61,15 @@ pub struct State {
     keymap_fd: Option<OwnedFd>,
     /// Chinese input follows the active xkb layout (needs >1 layout configured).
     follow_layout: bool,
+    /// Give the virtual keyboard its own copy of the keymap instead of
+    /// sharing the seat's (`COSMIC_EXT_IME_VK_OWN_KEYMAP=1`).  Off by
+    /// default: on cosmic-comp a virtual keyboard with its own keymap makes
+    /// the compositor swap the seat keymap on every alternation between a
+    /// physical key and a forwarded one, and each swap rebuilds the xkb
+    /// state from scratch, losing the locked layout and Caps Lock (cosmic-comp
+    /// `update_virtual_keyboard_keymap`, smithay `update_xkb_state`;
+    /// docs/compositor-notes.md §2).  With `no_keymap` both share one state.
+    vk_own_keymap: bool,
 
     /// Number of `done` events received; the serial expected by `commit`.
     done_serial: u32,
@@ -71,7 +83,8 @@ pub struct State {
     /// Chinese input on; when off every key is forwarded untouched.
     enabled: bool,
     /// A Shift press with no other key since; releasing it toggles `enabled`.
-    shift_tap_pending: bool,
+    shift_tap: ShiftTap,
+    layout: LayoutPolicy,
     loop_handle: Option<LoopHandle<'static, State>>,
     /// Wayland leaves key repeat to clients, so consumed keys are repeated
     /// here from the compositor's repeat_info.
@@ -97,7 +110,7 @@ impl State {
     ) -> Self {
         let input_method = im_manager.get_input_method(seat, qh, ());
         let virtual_keyboard = vk_manager.create_virtual_keyboard(seat, qh, ());
-        let popup = Popup::new(
+        let mut popup = Popup::new(
             qh,
             compositor,
             shm,
@@ -106,6 +119,8 @@ impl State {
             &input_method,
             Style::from_cosmic(cfg.popup_font_size as f32),
         );
+        popup.set_horizontal(cfg.popup_horizontal);
+        let shift_tap = ShiftTap::new(cfg.shift_tap_toggle);
         State {
             qh: qh.clone(),
             cfg,
@@ -119,6 +134,8 @@ impl State {
             xkb_state: None,
             keymap_fd: None,
             follow_layout: false,
+            vk_own_keymap: std::env::var_os("COSMIC_EXT_IME_VK_OWN_KEYMAP")
+                .is_some_and(|v| !v.is_empty() && v != "0"),
             done_serial: 0,
             pending_activate: false,
             pending_deactivate: false,
@@ -126,7 +143,8 @@ impl State {
             forwarded_keys: HashSet::new(),
             last_key_time: 0,
             enabled: true,
-            shift_tap_pending: false,
+            shift_tap,
+            layout: LayoutPolicy::new(),
             loop_handle: None,
             repeat: None,
             repeat_timer: None,
@@ -203,12 +221,12 @@ impl State {
             self.popup
                 .set_style(Style::from_cosmic(cfg.popup_font_size as f32));
         }
+        self.popup.set_horizontal(cfg.popup_horizontal);
         self.cfg = cfg;
+        self.shift_tap.set_enabled(self.cfg.shift_tap_toggle);
         self.follow_layout =
             self.cfg.follow_layout && self.keymap.as_ref().is_some_and(|k| k.num_layouts() > 1);
-        if self.follow_layout {
-            self.apply_layout();
-        } else {
+        if !self.follow_layout {
             self.set_enabled(true);
         }
     }
@@ -255,25 +273,16 @@ impl State {
             self.engine.reset();
             self.sync_to_client(None);
         }
+        // Switching to the Chinese source means Chinese: a Caps Lock
+        // English sub-mode left over from earlier never carries across.
+        if enabled && self.engine.set_english_mode(false) {
+            log::info!("{} reset to chinese mode", self.engine.name());
+            self.sync_to_client(None);
+        }
     }
 
     fn toggle_enabled(&mut self) {
         self.set_enabled(!self.enabled);
-    }
-
-    /// Re-evaluate `enabled` from the active layout name when following layouts.
-    fn apply_layout(&mut self) {
-        if !self.follow_layout {
-            return;
-        }
-        let (Some(keymap), Some(state)) = (&self.keymap, &self.xkb_state) else {
-            return;
-        };
-        let group = state.serialize_layout(xkb::STATE_LAYOUT_EFFECTIVE);
-        let name = keymap.layout_get_name(group).to_string();
-        let chinese = self.cfg.is_chinese_layout(&name);
-        log::debug!("layout {group}: {name:?} -> chinese={chinese}");
-        self.set_enabled(chinese);
     }
 
     fn handle_keymap(&mut self, format: WEnum<KeymapFormat>, fd: OwnedFd, size: u32) {
@@ -307,7 +316,11 @@ impl State {
                 let layouts: Vec<String> = (0..keymap.num_layouts())
                     .map(|i| keymap.layout_get_name(i).to_string())
                     .collect();
-                log::debug!("keymap loaded ({size} bytes), layouts {layouts:?}");
+                log::info!("keymap loaded ({size} bytes), layouts {layouts:?}");
+                if let Ok(path) = std::env::var("CHEWING_KEYMAP_DUMP") {
+                    let text = keymap.get_as_string(xkb::KEYMAP_FORMAT_TEXT_V1);
+                    let _ = std::fs::write(path, text);
+                }
                 self.follow_layout = self.cfg.follow_layout && layouts.len() > 1;
                 if self.cfg.follow_layout && layouts.len() == 1 {
                     log::info!(
@@ -317,10 +330,24 @@ impl State {
                 }
                 self.xkb_state = Some(xkb::State::new(&keymap));
                 self.keymap = Some(keymap);
+                // Never decide `enabled` from a keymap load (one comes with
+                // every focus change): a fresh xkb state reports group 0
+                // (the `KeymapReload` counterexample in
+                // docs/tla/IMELayoutCurrent.tla).  The compositor follows
+                // every load with a settled modifiers report that re-syncs.
+                self.layout.on_keymap_load();
+                // Share the seat's keymap and xkb state with the virtual
+                // keyboard (see `vk_own_keymap`).  The fd still travels with
+                // the request, so a compositor that compiles whatever it is
+                // handed gets the same keymap either way.
+                let vk_format = if self.vk_own_keymap {
+                    format
+                } else {
+                    KeymapFormat::NoKeymap
+                };
                 self.virtual_keyboard
-                    .keymap(format as u32, vk_fd.as_fd(), size);
+                    .keymap(vk_format as u32, vk_fd.as_fd(), size);
                 self.keymap_fd = Some(vk_fd);
-                self.apply_layout();
             }
             Ok(None) => log::error!("failed to compile keymap"),
             Err(e) => log::error!("failed to read keymap: {e}"),
@@ -368,8 +395,7 @@ impl State {
             if self.repeat.is_some_and(|(k, _)| k == key) {
                 self.stop_repeat();
             }
-            if is_shift && self.shift_tap_pending {
-                self.shift_tap_pending = false;
+            if is_shift && self.shift_tap.on_release() {
                 self.forward_key(time, key, key_state);
                 self.toggle_enabled();
                 return;
@@ -386,11 +412,9 @@ impl State {
 
         log::trace!("key {key} -> {input:?}");
         self.stop_repeat();
-        self.shift_tap_pending = self.cfg.shift_tap_toggle
-            && is_shift
-            && !input.modifiers.ctrl
-            && !input.modifiers.alt
-            && !input.modifiers.logo;
+        self.shift_tap.on_press(
+            is_shift && !input.modifiers.ctrl && !input.modifiers.alt && !input.modifiers.logo,
+        );
 
         if self.cfg.ctrl_space_toggle && input.key == Key::Space && input.modifiers.ctrl {
             self.consumed_keys.insert(key);
@@ -433,26 +457,21 @@ impl State {
         repeat_input: Option<KeyInput>,
     ) {
         let bell = response == Response::Bell;
-        let (consumed, commit) = match response {
-            Response::Ignored => (false, None),
-            Response::Consumed | Response::Bell => (true, None),
-            Response::Commit(text) => (true, Some(text)),
-            Response::CommitAndForward(text) => (false, Some(text)),
-        };
-        if consumed || commit.is_some() {
+        let d = disposition(&response, key_state == KeyState::Pressed, swallowed);
+        if d.sync {
             self.popup.set_error(bell);
-            self.sync_to_client(commit.as_deref());
+            self.sync_to_client(d.commit.as_deref());
         }
-        match key_state {
-            KeyState::Pressed if consumed => {
+        match d.action {
+            Action::ConsumePress => {
                 self.consumed_keys.insert(key);
                 if let Some(input) = repeat_input {
                     self.start_repeat(key, input);
                 }
             }
-            KeyState::Pressed => self.forward_key(time, key, key_state),
-            _ if swallowed => {}
-            _ => self.forward_key(time, key, key_state),
+            Action::ForwardPress => self.forward_key(time, key, key_state),
+            Action::DropRelease => {}
+            Action::ForwardRelease => self.forward_key(time, key, key_state),
         }
     }
 
@@ -500,8 +519,69 @@ impl State {
             self.drop_grab();
             self.grab = Some(self.input_method.grab_keyboard(&self.qh, ()));
             self.engine.reset();
+            // A text field always starts in Chinese: the Caps Lock English
+            // sub-mode has no indicator (the LED is kept off), so it must
+            // not persist silently across fields.  ibus-chewing's default
+            // (sync-caps-lock=keyboard) re-derives the mode from the LED on
+            // focus-in, which amounts to the same.
+            if self.engine.set_english_mode(false) {
+                log::info!("{} reset to chinese mode (focus)", self.engine.name());
+            }
             self.consumed_keys.clear();
             self.popup.hide();
+        }
+    }
+
+    /// A `modifiers` report from the grab.  `group` is the effective layout
+    /// (smithay `input_method_keyboard_grab.rs`); with the seat keymap shared
+    /// it is the locked one, the true input source.
+    fn handle_modifiers(&mut self, depressed: u32, latched: u32, locked: u32, group: u32) {
+        log::debug!(
+            "modifiers event: depressed={depressed:#010x} \
+             latched={latched:#010x} locked={locked:#010x} group={group}"
+        );
+        // While Chinese input is on, Caps Lock is only the Chinese/English
+        // toggle: the engine took the key, so the Lock the compositor set
+        // before the grab saw it is cleared again (English sub-mode types
+        // lower case, Shift for capitals; the LED stays off).  Only once the
+        // key is up: xkb keeps Lock depressed while the key is held, and an
+        // unlocking press clears the lock on release.  With Chinese input
+        // off, Caps Lock is a plain Caps Lock (docs/compositor-notes.md §5).
+        let lock = self.keymap.as_ref().map_or(0, keys::caps_mask);
+        let clear_lock = self.enabled && depressed & lock == 0 && locked & lock != 0;
+        let locked = if clear_lock { locked & !lock } else { locked };
+        if let Some(xkb_state) = self.xkb_state.as_mut() {
+            xkb_state.update_mask(depressed, latched, locked, 0, 0, group);
+        }
+        // With the keymap shared, `modifiers` writes straight into the seat's
+        // xkb state (cosmic-comp `set_modifier_mask`), which already holds
+        // what it just reported; an echo would only land late, after a Shift
+        // may have been released (§3).  So it is sent only to clear the Lock,
+        // or to a virtual keyboard with its own keymap.
+        if clear_lock || self.vk_own_keymap {
+            if clear_lock {
+                log::info!("caps lock cleared (chinese input on)");
+            }
+            self.virtual_keyboard
+                .modifiers(depressed, latched, locked, group);
+        }
+        // Enable/disable only from settled reports (no key held), the policy
+        // verified in docs/tla/IMELayoutFixed.tla (§4).
+        if depressed == 0 && latched == 0 {
+            let name = self
+                .keymap
+                .as_ref()
+                .map(|k| k.layout_get_name(group).to_string());
+            if let Some(enabled) =
+                self.layout
+                    .on_settled_group(group, name.as_deref(), &self.cfg, self.follow_layout)
+            {
+                log::info!(
+                    "layout {group}: {name:?} -> {}",
+                    if enabled { "chinese" } else { "english" }
+                );
+                self.set_enabled(enabled);
+            }
         }
     }
 
@@ -564,15 +644,7 @@ impl Dispatch<ZwpInputMethodKeyboardGrabV2, ()> for State {
                 mods_locked,
                 group,
                 ..
-            } => {
-                if let Some(xkb_state) = state.xkb_state.as_mut() {
-                    xkb_state.update_mask(mods_depressed, mods_latched, mods_locked, 0, 0, group);
-                }
-                state
-                    .virtual_keyboard
-                    .modifiers(mods_depressed, mods_latched, mods_locked, group);
-                state.apply_layout();
-            }
+            } => state.handle_modifiers(mods_depressed, mods_latched, mods_locked, group),
             Event::RepeatInfo { rate, delay } => {
                 state.repeat_rate = (rate > 0 && delay >= 0).then(|| {
                     (

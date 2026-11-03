@@ -773,6 +773,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f079e83a288787bcd14a6aea84cee5c87a67c5a3e660c30f557a3d24761b3527"
 
 [[package]]
+name = "chewing-sys"
+version = "0.2.1"
+dependencies = [
+ "bindgen",
+ "pkg-config",
+]
+
+[[package]]
 name = "clang-sys"
 version = "1.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1028,6 +1036,7 @@ dependencies = [
  "calloop-wayland-source",
  "cosmic-config",
  "cosmic-ext-ime-cangjie",
+ "cosmic-ext-ime-chewing",
  "cosmic-ext-ime-config",
  "cosmic-ext-ime-engine",
  "cosmic-ext-ime-pinyin",
@@ -1049,6 +1058,15 @@ name = "cosmic-ext-ime-cangjie"
 version = "0.2.1"
 dependencies = [
  "cangjie-sys",
+ "cosmic-ext-ime-engine",
+ "log",
+]
+
+[[package]]
+name = "cosmic-ext-ime-chewing"
+version = "0.2.1"
+dependencies = [
+ "chewing-sys",
  "cosmic-ext-ime-engine",
  "log",
 ]
@@ -2627,6 +2645,17 @@ name = "imagesize"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "edcd27d72f2f071c64249075f42e205ff93c9a4c5f6c6da53e79ed9f9832c285"
+
+[[package]]
+name = "improbe"
+version = "0.2.1"
+dependencies = [
+ "cosmic-text 0.19.0",
+ "memmap2 0.9.11",
+ "wayland-client",
+ "wayland-protocols",
+ "xkbcommon 0.8.0",
+]
 
 [[package]]
 name = "indexmap"
@@ -5248,6 +5277,14 @@ name = "version_check"
 version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
+
+[[package]]
+name = "vktap"
+version = "0.2.1"
+dependencies = [
+ "wayland-client",
+ "wayland-protocols-misc",
+]
 
 [[package]]
 name = "walkdir"

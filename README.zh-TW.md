@@ -5,6 +5,7 @@
 為 [COSMIC](https://system76.com/cosmic) 桌面（Pop!_OS）而寫的原生 Wayland 輸入法：
 用 [libcangjie2](https://cangjians.github.io/projects/libcangjie/) 輸入**倉頡**與**速成**
 （台灣稱簡易），用 [libpinyin](https://github.com/libpinyin/libpinyin) 輸入拼音／雙拼，
+用 [libchewing](https://github.com/chewing/libchewing) 輸入注音（新酷音），
 也可以透過 librime 使用任何 [RIME](https://rime.im/) 方案（注音、倉頡、行列、拼音等）。
 
 <p>
@@ -78,13 +79,17 @@ just install-user           # 安裝到 ~/.local/bin，含啟動器項目與自�
 
 > 注音使用者請改用 RIME 引擎，見下方〈RIME〉一節；libpinyin 引擎目前輸出簡體字。
 
+新酷音（libchewing）使用標準大千式注音：`1`–`9` 選字，空白鍵輸入一聲／翻頁，
+Enter 送出目前組字，Backspace／Escape 刪除或取消；鍵盤配置可在設定中選擇。
+若存在 `~/.chewing/chewing.sqlite3`，會直接沿用原有的使用者詞庫。
+
 ## 設定
 
 在應用程式清單搜尋「輸入法」「input method」或「倉頡」開啟
 **輸入法設定 Input Method Settings**，或執行 `cosmic-ext-ime-settings`。
 所有設定立即生效，不需重新啟動：
 
-- 輸入引擎：libcangjie（倉頡／速成）、RIME 或 libpinyin（智慧拼音）
+- 輸入引擎：libcangjie（倉頡／速成）、RIME、libpinyin（智慧拼音）或 libchewing（新酷音）
 - libcangjie：輸入方式（倉頡／速成）、倉頡三代／五代，以及字元集 —
   Big5、香港增補字符集 HKSCS、全部漢字、日文漢字、平假名、片假名、注音符號、標點、符號
   （假名以 `zj` 加羅馬字輸入，例如 `zja` → あ）
@@ -162,6 +167,8 @@ crates/config         設定的資料結構，經 cosmic-config 儲存（本體�
 crates/engine         InputEngine trait 與共用型別（不含 Wayland、不含 FFI）
 crates/cangjie-sys    libcangjie2 的 bindgen FFI
 crates/cangjie        安全封裝與倉頡／速成引擎（以真實資料庫測試）
+crates/chewing-sys    libchewing 的 bindgen FFI
+crates/chewing        cosmic-ext-ime-chewing Cargo 套件（新酷音注音引擎）
 crates/rime-sys       librime C API 的 bindgen FFI
 crates/rime           RIME 引擎：每個引擎一個 librime 工作階段，方案來自 rime-data
 crates/pinyin-sys     libpinyin 的 bindgen FFI
@@ -171,8 +178,8 @@ crates/pinyin         智慧拼音引擎（整句預測、雙拼、模糊音）
 ## 開發
 
 ```sh
-sudo apt install libcangjie2-dev libsqlite3-dev librime-dev libpinyin15-dev libpinyin-data libglib2.0-dev libxkbcommon-dev libclang-dev libwayland-dev
-cargo test --workspace     # 測試會使用真實的 libcangjie2、rime-data 與 libpinyin 資料
+sudo apt install libcangjie2-dev libchewing3-dev libsqlite3-dev librime-dev libpinyin15-dev libpinyin-data libglib2.0-dev libxkbcommon-dev libclang-dev libwayland-dev
+cargo test --workspace     # 測試會使用真實的 libcangjie2、libchewing、rime-data 與 libpinyin 資料
 RUST_LOG=debug cargo run --release -p cosmic-ext-ime
 ```
 
@@ -191,6 +198,7 @@ AppStream metainfo 與 man page 的版本號，接著提交並建立 tag。
 - [x] 候選字視窗支援 HiDPI／小數縮放，並跟隨 COSMIC 佈景主題
 - [x] librime 引擎
 - [x] libpinyin 引擎（智慧拼音／雙拼）
+- [x] libchewing 引擎（注音／新酷音）
 - [x] Debian 打包（`just deb`）與 PPA
 - [ ] libpinyin 輸出正體字（OpenCC）
 - [ ] 整合至 COSMIC 設定 → Keyboard（上游）
@@ -198,5 +206,6 @@ AppStream metainfo 與 man page 的版本號，接著提交並建立 tag。
 ## 授權
 
 GPL-3.0-or-later（見 `LICENSE`）。FFI 繫結的 crate 依循其封裝的函式庫：
-`crates/cangjie-sys` 為 LGPL-3.0-or-later，`crates/rime-sys` 為 BSD-3-Clause，
+`crates/cangjie-sys` 為 LGPL-3.0-or-later，`crates/chewing-sys` 為
+LGPL-2.1-or-later，`crates/rime-sys` 為 BSD-3-Clause，
 `crates/pinyin-sys` 為 GPL-2.0-or-later。
